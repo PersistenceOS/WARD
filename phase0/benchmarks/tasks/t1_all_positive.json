@@ -1,0 +1,13 @@
+{
+  "id": "t1_all_positive",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if every element of xs is strictly greater than 0, false otherwise. Callers guarantee xs is non-empty.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3]], "out": true},
+    {"in": [[1, -2, 3]], "out": false},
+    {"in": [[0]], "out": false},
+    {"in": [[7]], "out": true},
+    {"in": [[1, 1, 1]], "out": true}
+  ]
+}

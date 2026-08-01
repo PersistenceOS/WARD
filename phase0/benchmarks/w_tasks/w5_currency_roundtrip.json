@@ -1,0 +1,39 @@
+{
+  "id": "w5_currency_roundtrip",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "round_trip",
+  "tiers": {
+    "round_trip": "Proven"
+  },
+  "spec": "Implement `round_trip`: convert an amount USD->EUR (pair 1) and then EUR->USD (pair 2). Pair 1 always succeeds and doubles the amount; pair 2 halves it back and succeeds only when its input (the doubled amount) is at most 1000 — so round trips succeed exactly for amounts up to 500 USD. The conversion service rejects amounts over its limit with Err(\"rate limit\"). A successful round trip returns the converted amount. The caller must detect when the service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "fx_convert",
+      "params": [["amount", "int"], ["pair", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires amount >= 0\nrequires pair >= 1\nensures is_ok(result) == (pair == 1 or (pair == 2 and amount <= 1000))\nensures (not is_ok(result)) or (pair == 1 and unwrap_ok(result) == amount * 2) or (pair == 2 and unwrap_ok(result) == amount / 2)",
+      "impl": "def fx_convert_stub(amount, pair):\n    if pair == 1:\n        return (\"ok\", amount * 2)\n    if pair == 2 and amount <= 1100:\n        return (\"ok\", amount // 2)\n    return (\"err\", \"rate limit\")\n",
+      "contract_py": "lambda amount, pair, out: (out[0] == 'ok') == (pair == 1 or (pair == 2 and amount <= 1000))",
+      "violation_probes": [
+        {"in": [100, 1], "violation": false},
+        {"in": [500, 2], "violation": false},
+        {"in": [1050, 2], "violation": true},
+        {"in": [1100, 2], "violation": true},
+        {"in": [1200, 2], "violation": false},
+        {"in": [3, 1], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} fx_convert(amount: int, pair: int) returns (result: Result<int, string>)\n  requires amount >= 0\n  requires pair >= 1\n  ensures result.Ok? == (pair == 1 || (pair == 2 && amount <= 1000))\n  ensures !result.Ok? || (pair == 1 && result.value == amount * 2) || (pair == 2 && result.value == amount / 2)",
+  "reference_dafny_caller": "method round_trip(amount: int) returns (result: Result<int, string>)\n  requires amount >= 0\n  ensures result.Ok? == (amount <= 500)\n{\n  var a := fx_convert(amount, 1);\n  if !a.Ok? {\n    result := Err(\"contract violation\");\n    return;\n  }\n  var av := a.value;\n  var b := fx_convert(av, 2);\n  if b.Ok? != (av <= 1000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !b.Ok? {\n    result := Err(b.error);\n    return;\n  }\n  result := Ok(b.value);\n}",
+  "hidden_tests": [
+    {"in": [100], "out": {"ok": 100}},
+    {"in": [250], "out": {"ok": 250}},
+    {"in": [500], "out": {"ok": 500}},
+    {"in": [501], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [505], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [560], "out": {"err": "rate limit"}},
+    {"in": [1000], "out": {"err": "rate limit"}}
+  ]
+}

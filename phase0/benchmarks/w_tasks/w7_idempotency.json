@@ -1,0 +1,54 @@
+{
+  "id": "w7_idempotency",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "charge_idempotent",
+  "tiers": {
+    "charge_idempotent": "Proven"
+  },
+  "spec": "Implement `charge_idempotent`: charging is idempotent per key. The dedup service reports whether the key was processed before: it returns the prior charge id (key + 1) as Ok for keys below 500, and Ok(0) for unprocessed keys. If the key was already processed, return the prior charge id without charging again. Otherwise charge via the gateway, which accepts amounts up to its limit and declines larger ones with Err(\"declined\"). A successful new charge returns 0. The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "dedup_lookup",
+      "params": [["key", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires key > 0\nensures is_ok(result)\nensures (key < 500 and unwrap_ok(result) == key + 1) or (key >= 500 and unwrap_ok(result) == 0)",
+      "impl": "def dedup_lookup_stub(key):\n    if key < 550:\n        return (\"ok\", key + 1)\n    return (\"ok\", 0)\n",
+      "contract_py": "lambda key, out: (out[0] == 'ok') and (((key < 500) and (out[1] == key + 1)) or ((key >= 500) and (out[1] == 0)))",
+      "violation_probes": [
+        {"in": [100], "violation": false},
+        {"in": [499], "violation": false},
+        {"in": [520], "violation": true},
+        {"in": [550], "violation": false},
+        {"in": [600], "violation": false}
+      ]
+    },
+    {
+      "name": "gateway_charge",
+      "params": [["key", "int"], ["amount", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires key > 0\nrequires amount > 0\nensures is_ok(result) == (amount <= 100)",
+      "impl": "def gateway_charge_stub(key, amount):\n    if amount <= 120:\n        return (\"ok\", None)\n    return (\"err\", \"declined\")\n",
+      "contract_py": "lambda key, amount, out: (out[0] == 'ok') == (amount <= 100)",
+      "violation_probes": [
+        {"in": [600, 50], "violation": false},
+        {"in": [600, 100], "violation": false},
+        {"in": [600, 101], "violation": true},
+        {"in": [600, 110], "violation": true},
+        {"in": [600, 150], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} dedup_lookup(key: int) returns (result: Result<int, string>)\n  requires key > 0\n  ensures result.Ok?\n  ensures (key < 500 && result.value == key + 1) || (key >= 500 && result.value == 0)\n\nmethod {:extern}{:axiom} gateway_charge(key: int, amount: int) returns (result: Result<(), string>)\n  requires key > 0\n  requires amount > 0\n  ensures result.Ok? == (amount <= 100)",
+  "reference_dafny_caller": "method charge_idempotent(key: int, amount: int) returns (result: Result<int, string>)\n  requires key > 0\n  requires amount > 0\n  ensures result.Ok? == (key < 500 || amount <= 100)\n{\n  var d := dedup_lookup(key);\n  if !d.Ok? {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if (d.value == 0) != (key >= 500) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if d.value != 0 {\n    result := Ok(d.value);\n    return;\n  }\n  var c := gateway_charge(key, amount);\n  if c.Ok? != (amount <= 100) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !c.Ok? {\n    result := Err(c.error);\n    return;\n  }\n  result := Ok(0);\n}",
+  "hidden_tests": [
+    {"in": [100, 200], "out": {"ok": 101}},
+    {"in": [400, 200], "out": {"ok": 401}},
+    {"in": [600, 50], "out": {"ok": 0}},
+    {"in": [600, 100], "out": {"ok": 0}},
+    {"in": [520, 200], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [600, 101], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [600, 110], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [600, 150], "out": {"err": "declined"}}
+  ]
+}

@@ -1,0 +1,23 @@
+fn gcd(a: int, b: int) -> int
+  requires a > 0
+  requires b > 0
+  ensures result > 0
+  ensures result <= a
+{
+    var x: int = a;
+    var y: int = b;
+    for i in range(0, a + b)
+      invariant x > 0 and y > 0
+      invariant x <= a and y <= b
+    {
+        if x == y {
+            return x;
+        }
+        if x > y {
+            x -= y;
+        } else {
+            y -= x;
+        }
+    }
+    return x;
+}

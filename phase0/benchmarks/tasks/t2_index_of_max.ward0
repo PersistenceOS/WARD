@@ -1,0 +1,19 @@
+fn index_of_max(xs: List<int>) -> int
+  requires len(xs) > 0
+  ensures result >= 0 and result < len(xs)
+  ensures forall j in range(0, len(xs)) :: xs[j] <= xs[result]
+{
+    var m: int = xs[0];
+    var mi: int = 0;
+    for i in range(1, len(xs))
+      invariant forall j in range(0, i) :: xs[j] <= m
+      invariant mi >= 0 and mi < i
+      invariant xs[mi] == m
+    {
+        if xs[i] > m {
+            m = xs[i];
+            mi = i;
+        }
+    }
+    return mi;
+}

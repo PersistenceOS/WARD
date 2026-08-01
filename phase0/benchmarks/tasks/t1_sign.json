@@ -1,0 +1,13 @@
+{
+  "id": "t1_sign",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return 1 if x > 0, -1 if x < 0, 0 if x == 0.",
+  "hidden_tests": [
+    {"in": [5], "out": 1},
+    {"in": [-5], "out": -1},
+    {"in": [0], "out": 0},
+    {"in": [1000], "out": 1},
+    {"in": [-1], "out": -1}
+  ]
+}

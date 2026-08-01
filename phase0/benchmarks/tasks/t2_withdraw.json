@@ -1,0 +1,13 @@
+{
+  "id": "t2_withdraw",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Withdraw amount from balance. Return Ok(balance - amount) if balance >= amount, otherwise Err(\"insufficient funds\"). Callers guarantee balance >= 0 and amount > 0.",
+  "hidden_tests": [
+    {"in": [100, 30], "out": {"ok": 70}},
+    {"in": [100, 100], "out": {"ok": 0}},
+    {"in": [10, 20], "out": {"err": "insufficient funds"}},
+    {"in": [0, 5], "out": {"err": "insufficient funds"}},
+    {"in": [50, 1], "out": {"ok": 49}}
+  ]
+}

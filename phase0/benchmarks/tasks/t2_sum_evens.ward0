@@ -1,0 +1,14 @@
+fn sum_evens(xs: List<int>) -> int
+  requires forall i in range(0, len(xs)) :: xs[i] >= 0
+  ensures result >= 0
+{
+    var acc: int = 0;
+    for i in range(0, len(xs))
+      invariant acc >= 0
+    {
+        if xs[i] % 2 == 0 {
+            acc += xs[i];
+        }
+    }
+    return acc;
+}

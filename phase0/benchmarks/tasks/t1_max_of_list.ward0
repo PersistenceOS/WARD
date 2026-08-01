@@ -1,0 +1,16 @@
+// Tier 1 - Trivial (pure arithmetic / array search)
+// id: t1_max_of_list
+fn max_of_list(xs: List<int>) -> int
+  requires len(xs) > 0
+  ensures result >= xs[0]
+{
+    var m: int = xs[0];
+    for i in range(1, len(xs))
+      invariant m >= xs[0]
+    {
+        if xs[i] > m {
+            m = xs[i];
+        }
+    }
+    return m;
+}

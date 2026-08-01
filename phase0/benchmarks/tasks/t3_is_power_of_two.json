@@ -1,0 +1,14 @@
+{
+  "id": "t3_is_power_of_two",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return true if n is a power of two (1, 2, 4, 8, ...), false otherwise. Callers guarantee n in [1, 1000000000].",
+  "hidden_tests": [
+    {"in": [1], "out": true},
+    {"in": [2], "out": true},
+    {"in": [4], "out": true},
+    {"in": [1024], "out": true},
+    {"in": [3], "out": false},
+    {"in": [1000000000], "out": false}
+  ]
+}

@@ -1,0 +1,29 @@
+// W1 payment chain - reference caller (trust-arm: full contracts; defensive checks)
+fn pay(user_id: int, amount: int, token: str) -> Result<Unit, str>
+  requires user_id > 0
+  requires amount > 0
+  ensures is_ok(result) == (user_id < 1000 and amount <= 100)
+{
+    var a: Result<Unit, str> = auth_check(user_id);
+    if is_ok(a) != (user_id < 1000) {
+        return Err("contract violation");
+    }
+    if is_err(a) {
+        return Err(unwrap_err(a));
+    }
+    var r: Result<Unit, str> = rate_limit(amount);
+    if is_ok(r) != (amount <= 5000) {
+        return Err("contract violation");
+    }
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    var c: Result<Unit, str> = stripe_charge(amount, token);
+    if is_ok(c) != (amount <= 100) {
+        return Err("contract violation");
+    }
+    if is_ok(c) {
+        return Ok(unwrap_ok(c));
+    }
+    return Err(unwrap_err(c));
+}

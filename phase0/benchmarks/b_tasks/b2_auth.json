@@ -1,0 +1,20 @@
+{
+  "id": "b2_auth",
+  "buggy": false,
+  "spec": "Implement `verify_otp`: verify a login one-time password for a user. The OTP service accepts the valid OTP (123456) for any user id and rejects everything else with Err(\"invalid otp\"). A valid OTP yields Ok(()).",
+  "fn": "verify_otp",
+  "extern": {
+    "name": "otp_service",
+    "params": [["otp", "int"], ["user_id", "int"]],
+    "ret": "Result<Unit, str>",
+    "contract": "requires otp >= 0\nensures is_ok(result) == (otp == 123456)",
+    "impl": "def otp_service_stub(otp, user_id):\n    if otp == 123456:\n        return (\"ok\", None)\n    return (\"err\", \"invalid otp\")\n",
+    "contract_py": "lambda otp, user_id, out: (out[0] == 'ok') == (otp == 123456)"
+  },
+  "hidden_tests": [
+    {"in": [123456, 7], "out": {"ok": null}},
+    {"in": [123456, 99], "out": {"ok": null}},
+    {"in": [123455, 7], "out": {"err": "invalid otp"}},
+    {"in": [0, 7], "out": {"err": "invalid otp"}}
+  ]
+}

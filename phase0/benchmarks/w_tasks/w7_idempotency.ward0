@@ -1,0 +1,25 @@
+// W7 idempotency - reference caller (Proven tier)
+fn charge_idempotent(key: int, amount: int) -> Result<int, str>
+  requires key > 0
+  requires amount > 0
+  ensures is_ok(result) == (key < 500 or amount <= 100)
+{
+    var d: Result<int, str> = dedup_lookup(key);
+    if is_err(d) {
+        return Err("contract violation");
+    }
+    if (unwrap_ok(d) == 0) != (key >= 500) {
+        return Err("contract violation");
+    }
+    if unwrap_ok(d) != 0 {
+        return Ok(unwrap_ok(d));
+    }
+    var c: Result<Unit, str> = gateway_charge(key, amount);
+    if is_ok(c) != (amount <= 100) {
+        return Err("contract violation");
+    }
+    if is_err(c) {
+        return Err(unwrap_err(c));
+    }
+    return Ok(0);
+}

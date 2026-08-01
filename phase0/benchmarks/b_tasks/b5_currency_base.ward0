@@ -1,0 +1,14 @@
+// B5 currency - baseline-arm reference (no stub contract)
+fn convert(src_cur: str, dst_cur: str, amount: int) -> Result<int, str>
+  requires amount >= 0
+  ensures is_ok(result) or is_err(result)
+{
+    var r: Result<int, str> = currency_convert(src_cur, dst_cur, amount);
+    if is_ok(r) != (src_cur == dst_cur or amount <= 10000) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

@@ -1,0 +1,20 @@
+{
+  "id": "b6_transfer",
+  "buggy": false,
+  "spec": "Implement `transfer`: move an amount out of an account balance. The ledger debits the account when funds suffice, returning the new balance as Ok(new_balance); otherwise it returns Err(\"insufficient funds\").",
+  "fn": "transfer",
+  "extern": {
+    "name": "ledger_transfer",
+    "params": [["balance", "int"], ["amount", "int"]],
+    "ret": "Result<int, str>",
+    "contract": "requires balance >= 0\nrequires amount >= 0\nensures is_ok(result) == (amount <= balance)",
+    "impl": "def ledger_transfer_stub(balance, amount):\n    if amount <= balance:\n        return (\"ok\", balance - amount)\n    return (\"err\", \"insufficient funds\")\n",
+    "contract_py": "lambda balance, amount, out: (out[0] == 'ok') == (amount <= balance)"
+  },
+  "hidden_tests": [
+    {"in": [100, 30], "out": {"ok": 70}},
+    {"in": [100, 100], "out": {"ok": 0}},
+    {"in": [50, 60], "out": {"err": "insufficient funds"}},
+    {"in": [0, 0], "out": {"ok": 0}}
+  ]
+}

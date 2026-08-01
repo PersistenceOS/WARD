@@ -1,0 +1,13 @@
+{
+  "id": "t1_max3",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return the maximum of the three integers a, b, c.",
+  "hidden_tests": [
+    {"in": [1, 2, 3], "out": 3},
+    {"in": [3, 2, 1], "out": 3},
+    {"in": [5, 5, 5], "out": 5},
+    {"in": [-1, -2, -3], "out": -1},
+    {"in": [7, 7, 2], "out": 7}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "t1_is_even",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return true if n is even (n % 2 == 0), false otherwise.",
+  "hidden_tests": [
+    {"in": [4], "out": true},
+    {"in": [7], "out": false},
+    {"in": [0], "out": true},
+    {"in": [-2], "out": true},
+    {"in": [-3], "out": false}
+  ]
+}

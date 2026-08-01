@@ -1,0 +1,14 @@
+fn count_matches(xs: List<int>, ys: List<int>) -> int
+  requires len(xs) == len(ys)
+  ensures result >= 0
+{
+    var n: int = 0;
+    for i in range(0, len(xs))
+      invariant n >= 0
+    {
+        if xs[i] == ys[i] {
+            n += 1;
+        }
+    }
+    return n;
+}

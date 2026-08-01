@@ -1,0 +1,13 @@
+{
+  "id": "t1_avg_floor",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return floor(sum(xs) / len(xs)) using integer division. Callers guarantee xs is non-empty and every element is >= 0.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3]], "out": 2},
+    {"in": [[1, 2]], "out": 1},
+    {"in": [[5]], "out": 5},
+    {"in": [[0, 0, 0]], "out": 0},
+    {"in": [[2, 4, 6, 8]], "out": 5}
+  ]
+}

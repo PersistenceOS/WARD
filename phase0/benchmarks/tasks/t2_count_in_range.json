@@ -1,0 +1,13 @@
+{
+  "id": "t2_count_in_range",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Count how many elements of xs lie in the inclusive range [lo, hi]. Callers guarantee lo <= hi.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3, 4, 5], 2, 4], "out": 3},
+    {"in": [[], 0, 10], "out": 0},
+    {"in": [[-1, 0, 1], 0, 1], "out": 2},
+    {"in": [[5, 6], 7, 9], "out": 0},
+    {"in": [[3, 3, 3], 3, 3], "out": 3}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "t3_count_divisors",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Count how many integers in [1, n] divide n evenly. Callers guarantee n >= 1.",
+  "hidden_tests": [
+    {"in": [1], "out": 1},
+    {"in": [6], "out": 4},
+    {"in": [12], "out": 6},
+    {"in": [7], "out": 2},
+    {"in": [100], "out": 9}
+  ]
+}

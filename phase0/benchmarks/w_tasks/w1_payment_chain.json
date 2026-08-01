@@ -1,0 +1,63 @@
+{
+  "id": "w1_payment_chain",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "pay",
+  "tiers": {
+    "pay": "Proven"
+  },
+  "spec": "Implement `pay`: authorize the purchase (user must be a known customer), check the amount against the per-transaction rate limit, then charge via the payment gateway. The authorizer rejects unknown users with Err(\"unauthorized\"); the rate limiter rejects amounts above its limit with Err(\"rate exceeded\"); the gateway charges purchases up to its internal per-transaction limit and declines larger ones with Err(\"declined\"). A successful payment is Ok(()).",
+  "externs": [
+    {
+      "name": "auth_check",
+      "params": [["user_id", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires user_id > 0\nensures is_ok(result) == (user_id < 1000)",
+      "impl": "def auth_check_stub(user_id):\n    if user_id < 1200:\n        return (\"ok\", None)\n    return (\"err\", \"unauthorized\")\n",
+      "contract_py": "lambda user_id, out: (out[0] == 'ok') == (user_id < 1000)",
+      "violation_probes": [
+        {"in": [500], "violation": false},
+        {"in": [1100], "violation": true},
+        {"in": [1300], "violation": false}
+      ]
+    },
+    {
+      "name": "rate_limit",
+      "params": [["amount", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires amount > 0\nensures is_ok(result) == (amount <= 5000)",
+      "impl": "def rate_limit_stub(amount):\n    if amount <= 6000:\n        return (\"ok\", None)\n    return (\"err\", \"rate exceeded\")\n",
+      "contract_py": "lambda amount, out: (out[0] == 'ok') == (amount <= 5000)",
+      "violation_probes": [
+        {"in": [1000], "violation": false},
+        {"in": [5500], "violation": true},
+        {"in": [7000], "violation": false}
+      ]
+    },
+    {
+      "name": "stripe_charge",
+      "params": [["amount", "int"], ["token", "str"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires amount > 0\nensures is_ok(result) == (amount <= 100)",
+      "impl": "def stripe_charge_stub(amount, token):\n    if amount <= 120:\n        return (\"ok\", None)\n    return (\"err\", \"declined\")\n",
+      "contract_py": "lambda amount, token, out: (out[0] == 'ok') == (amount <= 100)",
+      "violation_probes": [
+        {"in": [50, "tok"], "violation": false},
+        {"in": [110, "tok"], "violation": true},
+        {"in": [150, "tok"], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} auth_check(user_id: int) returns (result: Result<(), string>)\n  requires user_id > 0\n  ensures result.Ok? == (user_id < 1000)\n\nmethod {:extern}{:axiom} rate_limit(amount: int) returns (result: Result<(), string>)\n  requires amount > 0\n  ensures result.Ok? == (amount <= 5000)\n\nmethod {:extern}{:axiom} stripe_charge(amount: int, token: string) returns (result: Result<(), string>)\n  requires amount > 0\n  ensures result.Ok? == (amount <= 100)",
+  "reference_dafny_caller": "method pay(user_id: int, amount: int, token: string) returns (result: Result<(), string>)\n  requires user_id > 0\n  requires amount > 0\n  ensures result.Ok? == (user_id < 1000 && amount <= 100)\n{\n  var a := auth_check(user_id);\n  if a.Ok? != (user_id < 1000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !a.Ok? {\n    result := Err(a.error);\n    return;\n  }\n  var r := rate_limit(amount);\n  if r.Ok? != (amount <= 5000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  var c := stripe_charge(amount, token);\n  if c.Ok? != (amount <= 100) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if c.Ok? {\n    result := Ok(());\n  } else {\n    result := Err(c.error);\n  }\n}",
+  "hidden_tests": [
+    {"in": [500, 50, "tok_ok"], "out": {"ok": null}},
+    {"in": [500, 100, "tok_ok"], "out": {"ok": null}},
+    {"in": [1100, 50, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [1500, 50, "tok_ok"], "out": {"err": "unauthorized"}},
+    {"in": [500, 110, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [500, 150, "tok_ok"], "out": {"err": "declined"}},
+    {"in": [500, 5500, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [500, 7000, "tok_ok"], "out": {"err": "rate exceeded"}}
+  ]
+}

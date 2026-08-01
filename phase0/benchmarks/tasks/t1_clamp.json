@@ -1,0 +1,13 @@
+{
+  "id": "t1_clamp",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return x clamped into the inclusive range [lo, hi]. Callers guarantee lo <= hi. If x < lo return lo; if x > hi return hi; otherwise return x.",
+  "hidden_tests": [
+    {"in": [5, 0, 10], "out": 5},
+    {"in": [-5, 0, 10], "out": 0},
+    {"in": [15, 0, 10], "out": 10},
+    {"in": [3, 3, 3], "out": 3},
+    {"in": [0, 0, 0], "out": 0}
+  ]
+}

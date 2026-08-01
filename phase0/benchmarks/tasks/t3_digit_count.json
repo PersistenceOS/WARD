@@ -1,0 +1,14 @@
+{
+  "id": "t3_digit_count",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return the number of decimal digits of n (e.g. 12345 has 5 digits). Callers guarantee n in [1, 1000000000].",
+  "hidden_tests": [
+    {"in": [1], "out": 1},
+    {"in": [9], "out": 1},
+    {"in": [10], "out": 2},
+    {"in": [12345], "out": 5},
+    {"in": [1000000000], "out": 10},
+    {"in": [999999999], "out": 9}
+  ]
+}

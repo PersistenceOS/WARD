@@ -1,0 +1,13 @@
+{
+  "id": "t2_apply_discount",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return price reduced by discount_pct percent, rounded down: price - (price * discount_pct) / 100. Callers guarantee price >= 0 and discount_pct in [0, 100].",
+  "hidden_tests": [
+    {"in": [100, 10], "out": 90},
+    {"in": [100, 100], "out": 0},
+    {"in": [100, 0], "out": 100},
+    {"in": [99, 50], "out": 50},
+    {"in": [7, 33], "out": 5}
+  ]
+}

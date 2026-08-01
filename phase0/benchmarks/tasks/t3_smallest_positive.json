@@ -1,0 +1,14 @@
+{
+  "id": "t3_smallest_positive",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return the smallest strictly positive element of xs, or -1 if xs has no positive element. Callers guarantee xs is non-empty.",
+  "hidden_tests": [
+    {"in": [[-1, 2, 3]], "out": 2},
+    {"in": [[1, 2, 3]], "out": 1},
+    {"in": [[-5, -2]], "out": -1},
+    {"in": [[0, 0]], "out": -1},
+    {"in": [[7]], "out": 7},
+    {"in": [[5, 1, 5]], "out": 1}
+  ]
+}

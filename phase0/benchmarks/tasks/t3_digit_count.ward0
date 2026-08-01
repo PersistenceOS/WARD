@@ -1,0 +1,15 @@
+fn digit_count(n: int) -> int
+  requires n >= 1 and n <= 1000000000
+  ensures result >= 1 and result <= 31
+{
+    var m: int = n;
+    for i in range(0, 31)
+      invariant m >= 1
+    {
+        if m < 10 {
+            return i + 1;
+        }
+        m = m / 10;
+    }
+    return 31;
+}

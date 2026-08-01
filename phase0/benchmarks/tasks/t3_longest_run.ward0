@@ -1,0 +1,20 @@
+fn longest_run(xs: List<int>, v: int) -> int
+  requires len(xs) > 0
+  ensures result >= 0
+{
+    var best: int = 0;
+    var cur: int = 0;
+    for i in range(0, len(xs))
+      invariant best >= 0 and cur >= 0
+    {
+        if xs[i] == v {
+            cur += 1;
+        } else {
+            cur = 0;
+        }
+        if cur > best {
+            best = cur;
+        }
+    }
+    return best;
+}

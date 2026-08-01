@@ -1,0 +1,28 @@
+// W6 CRUD handler - reference caller (Tested tier)
+fn crud_op(op: int, key: int, value: int) -> Result<int, str>
+  requires op >= 1
+  requires key > 0
+  ensures is_ok(result) == ((op == 1 or op == 2) and key < 1000)
+{
+    if op == 1 {
+        var v: Result<int, str> = db_get(key);
+        if is_ok(v) != (key < 1000) {
+            return Err("contract violation");
+        }
+        if is_err(v) {
+            return Err(unwrap_err(v));
+        }
+        return Ok(unwrap_ok(v));
+    }
+    if op == 2 {
+        var u: Result<Unit, str> = db_put(key, value);
+        if is_ok(u) != (key < 1000) {
+            return Err("contract violation");
+        }
+        if is_err(u) {
+            return Err(unwrap_err(u));
+        }
+        return Ok(0);
+    }
+    return Err("bad op");
+}

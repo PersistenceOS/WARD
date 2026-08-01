@@ -1,0 +1,81 @@
+// ward0 grammar v0.1 — strict subset for Phase 0.
+// PEG (lark), parser='lalr' so ambiguities fail at build time.
+// Design rules: only things translatable 1:1 to Dafny 4.x are allowed.
+// Notes:
+//  - len(xs) is the list/string length operator (maps to Dafny |xs|)
+//  - result is the conventional name for the return value inside ensures
+//  - () is the Unit literal
+//  - `modifies` is NOT in v0.1: no heap/records; param mutation is handled
+//    by the transpiler via local shadowing
+
+start: file
+
+file: definition*
+
+definition: fn_def | extern_def
+
+fn_def: "fn" NAME "(" [params] ")" "->" type (contract)* block
+
+extern_def: "extern" "fn" NAME "(" [params] ")" "->" type (contract)* ";"
+
+params: param ("," param)*
+param: NAME ":" type
+
+type: INT_TYPE | BOOL_TYPE | STR_TYPE | UNIT_TYPE
+     | RESULT_TYPE "<" type "," type ">"
+     | LIST_TYPE "<" type ">"
+
+INT_TYPE: "int"
+BOOL_TYPE: "bool"
+STR_TYPE: "str"
+UNIT_TYPE: "Unit"
+RESULT_TYPE: "Result"
+LIST_TYPE: "List"
+
+contract: "requires" expr
+        | "ensures" expr
+
+block: "{" stmt* "}"
+
+stmt: var_decl
+    | assign
+    | if_stmt
+    | for_stmt
+    | return_stmt
+    | call_stmt
+
+var_decl: "var" NAME ":" type "=" expr ";"
+assign: lvalue assign_op expr ";"
+assign_op: "=" | "+=" | "-=" | "*=" | "/=" | "%="
+lvalue: NAME ("." NAME)*
+if_stmt: "if" expr block ("else" block)?
+for_stmt: "for" NAME "in" "range" "(" expr "," expr ")" loop_invariant* block
+loop_invariant: "invariant" expr
+return_stmt: "return" [expr] ";"
+call_stmt: call ";"
+
+?expr: or_expr
+?or_expr: and_expr ("or" and_expr)*
+?and_expr: not_expr ("and" not_expr)*
+?not_expr: "not" not_expr | comparison
+?comparison: sum (comp_op sum)*
+comp_op: "==" | "!=" | "<" | "<=" | ">" | ">="
+?sum: product (("+" | "-") product)*
+?product: factor (("*" | "/" | "%") factor)*
+?factor: "-" factor | "(" expr ")" | atom
+?atom: call | indexed | unit_lit | quantifier | NAME ("." NAME)* | NUM | STRING | "true" | "false"
+
+call: NAME "(" [args] ")"
+args: expr ("," expr)*
+indexed: NAME ("." NAME)* "[" expr "]"
+unit_lit: "(" ")"
+quantifier: quant_kw NAME "in" "range" "(" expr "," expr ")" "::" expr
+quant_kw: "forall" | "exists"
+
+NUM: /\d+/
+STRING: /"[^"]*"/
+NAME: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+%import common.WS
+%ignore WS
+%ignore /\/\/[^\n]*/

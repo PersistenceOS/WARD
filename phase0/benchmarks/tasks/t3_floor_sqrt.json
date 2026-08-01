@@ -1,0 +1,15 @@
+{
+  "id": "t3_floor_sqrt",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return floor(sqrt(n)): the largest integer k >= 0 with k*k <= n. Callers guarantee n >= 0.",
+  "hidden_tests": [
+    {"in": [0], "out": 0},
+    {"in": [1], "out": 1},
+    {"in": [2], "out": 1},
+    {"in": [9], "out": 3},
+    {"in": [10], "out": 3},
+    {"in": [100], "out": 10},
+    {"in": [99], "out": 9}
+  ]
+}

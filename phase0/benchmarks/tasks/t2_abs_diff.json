@@ -1,0 +1,13 @@
+{
+  "id": "t2_abs_diff",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the absolute difference |a - b| between the two integers a and b.",
+  "hidden_tests": [
+    {"in": [5, 3], "out": 2},
+    {"in": [3, 5], "out": 2},
+    {"in": [5, 5], "out": 0},
+    {"in": [-3, 2], "out": 5},
+    {"in": [0, 0], "out": 0}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "t2_even_minus_odd",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the number of even elements of xs minus the number of odd elements of xs.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3, 4]], "out": 0},
+    {"in": [[]], "out": 0},
+    {"in": [[2, 2]], "out": 2},
+    {"in": [[1, 1]], "out": -2},
+    {"in": [[1, 2]], "out": 0}
+  ]
+}

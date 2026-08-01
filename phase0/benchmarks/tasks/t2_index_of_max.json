@@ -1,0 +1,13 @@
+{
+  "id": "t2_index_of_max",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the index of the maximum element of xs. If several elements share the maximum, return the smallest such index. Callers guarantee xs is non-empty.",
+  "hidden_tests": [
+    {"in": [[3, 1, 2]], "out": 0},
+    {"in": [[1, 2, 3]], "out": 2},
+    {"in": [[5]], "out": 0},
+    {"in": [[7, 7, 7]], "out": 0},
+    {"in": [[-1, -5, 0]], "out": 2}
+  ]
+}

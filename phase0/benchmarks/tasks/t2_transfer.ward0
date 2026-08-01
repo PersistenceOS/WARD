@@ -1,0 +1,9 @@
+fn transfer(from_bal: int, to_bal: int, amount: int) -> Result<Unit, str>
+  requires from_bal >= 0 and to_bal >= 0 and amount > 0
+  ensures is_err(result) == (amount > from_bal)
+{
+    if amount > from_bal {
+        return Err("insufficient funds");
+    }
+    return Ok(());
+}

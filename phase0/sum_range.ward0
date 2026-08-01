@@ -1,0 +1,13 @@
+fn sum_range(lo: int, hi: int) -> int
+  requires 0 <= lo
+  requires lo <= hi
+  ensures result == (lo + hi) * (hi - lo + 1) / 2
+{
+    var total: int = 0;
+    for i in range(lo, hi + 1)
+      invariant total == (lo + i - 1) * (i - lo) / 2
+    {
+        total = total + i;
+    }
+    return total;
+}

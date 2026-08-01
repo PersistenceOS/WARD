@@ -1,0 +1,13 @@
+{
+  "id": "t1_pow",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return base raised to the exponent e (base^e), computed by repeated multiplication. Callers guarantee base >= 0 and e in [0, 20].",
+  "hidden_tests": [
+    {"in": [2, 10], "out": 1024},
+    {"in": [3, 0], "out": 1},
+    {"in": [0, 5], "out": 0},
+    {"in": [1, 20], "out": 1},
+    {"in": [5, 3], "out": 125}
+  ]
+}

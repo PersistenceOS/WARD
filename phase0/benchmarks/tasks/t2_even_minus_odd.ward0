@@ -1,0 +1,12 @@
+fn even_minus_odd(xs: List<int>) -> int
+{
+    var diff: int = 0;
+    for i in range(0, len(xs)) {
+        if xs[i] % 2 == 0 {
+            diff += 1;
+        } else {
+            diff -= 1;
+        }
+    }
+    return diff;
+}

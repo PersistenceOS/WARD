@@ -1,0 +1,7 @@
+[1/1] t2_gcd (tier 2)...
+    -> not solved (verify_fail, 607s) | elapsed 607s, avg 607s/task, ETA 0s
+tasks: 1  solved: 0  pass@2: 0.000
+  tier 2: 0/1 solved
+  pass@1: 0
+  pass@2: 0
+  attempt outcomes: {'verify_fail': 2}

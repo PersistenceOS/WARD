@@ -1,0 +1,14 @@
+{
+  "id": "t3_is_prime",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return true if n is prime (no integer in [2, n-1] divides n evenly), false otherwise. Callers guarantee n >= 2.",
+  "hidden_tests": [
+    {"in": [2], "out": true},
+    {"in": [3], "out": true},
+    {"in": [4], "out": false},
+    {"in": [17], "out": true},
+    {"in": [100], "out": false},
+    {"in": [97], "out": true}
+  ]
+}

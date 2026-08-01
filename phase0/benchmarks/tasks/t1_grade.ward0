@@ -1,0 +1,18 @@
+fn grade(pct: int) -> str
+  requires pct >= 0 and pct <= 100
+  ensures result == "A" or result == "B" or result == "C" or result == "D" or result == "F"
+{
+    if pct >= 90 {
+        return "A";
+    }
+    if pct >= 80 {
+        return "B";
+    }
+    if pct >= 70 {
+        return "C";
+    }
+    if pct >= 60 {
+        return "D";
+    }
+    return "F";
+}

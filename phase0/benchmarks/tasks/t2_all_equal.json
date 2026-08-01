@@ -1,0 +1,13 @@
+{
+  "id": "t2_all_equal",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if all elements of xs are equal to each other, false otherwise. Callers guarantee xs is non-empty.",
+  "hidden_tests": [
+    {"in": [[1, 1, 1]], "out": true},
+    {"in": [[1, 2, 1]], "out": false},
+    {"in": [[5]], "out": true},
+    {"in": [[0, 0, 0, 0]], "out": true},
+    {"in": [[1, 1, 2]], "out": false}
+  ]
+}

@@ -1,0 +1,17 @@
+fn all_positive(xs: List<int>) -> bool
+  requires len(xs) > 0
+  ensures result == (forall i in range(0, len(xs)) :: xs[i] > 0)
+{
+    var n: int = 0;
+    var all_pos: bool = true;
+    for i in range(0, len(xs))
+      invariant all_pos == (forall j in range(0, i) :: xs[j] > 0)
+      invariant n == i
+    {
+        if xs[i] <= 0 {
+            all_pos = false;
+        }
+        n += 1;
+    }
+    return all_pos;
+}

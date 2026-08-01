@@ -1,0 +1,13 @@
+{
+  "id": "t2_count_negative",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Count how many elements of xs are strictly less than 0.",
+  "hidden_tests": [
+    {"in": [[-1, 2, -3]], "out": 2},
+    {"in": [[]], "out": 0},
+    {"in": [[0]], "out": 0},
+    {"in": [[-5]], "out": 1},
+    {"in": [[-2, -1, 0]], "out": 2}
+  ]
+}

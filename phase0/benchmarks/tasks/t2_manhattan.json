@@ -1,0 +1,13 @@
+{
+  "id": "t2_manhattan",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the Manhattan distance |x1-x2| + |y1-y2| between two points.",
+  "hidden_tests": [
+    {"in": [0, 0, 3, 4], "out": 7},
+    {"in": [1, 1, 1, 1], "out": 0},
+    {"in": [-1, -1, 2, 3], "out": 7},
+    {"in": [10, 10, 0, 0], "out": 20},
+    {"in": [0, 5, 0, -5], "out": 10}
+  ]
+}

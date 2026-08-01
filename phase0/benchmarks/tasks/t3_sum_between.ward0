@@ -1,0 +1,13 @@
+fn sum_between(xs: List<int>, lo: int, hi: int) -> int
+  requires 0 <= lo and lo <= hi and hi <= len(xs)
+  requires forall i in range(0, len(xs)) :: xs[i] >= 0
+  ensures result >= 0
+{
+    var acc: int = 0;
+    for i in range(lo, hi)
+      invariant acc >= 0
+    {
+        acc += xs[i];
+    }
+    return acc;
+}

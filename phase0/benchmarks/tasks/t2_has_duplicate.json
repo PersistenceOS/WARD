@@ -1,0 +1,13 @@
+{
+  "id": "t2_has_duplicate",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if xs contains any value at least twice (some pair of distinct indices i < j with xs[i] == xs[j]), false otherwise.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3, 2]], "out": true},
+    {"in": [[1, 2, 3]], "out": false},
+    {"in": [[]], "out": false},
+    {"in": [[5, 5]], "out": true},
+    {"in": [[1]], "out": false}
+  ]
+}

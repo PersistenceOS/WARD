@@ -1,0 +1,12 @@
+fn is_palindrome(xs: List<int>) -> bool
+  ensures result == (forall i in range(0, len(xs) / 2) :: xs[i] == xs[len(xs) - 1 - i])
+{
+    for i in range(0, len(xs) / 2)
+      invariant forall j in range(0, i) :: xs[j] == xs[len(xs) - 1 - j]
+    {
+        if xs[i] != xs[len(xs) - 1 - i] {
+            return false;
+        }
+    }
+    return true;
+}

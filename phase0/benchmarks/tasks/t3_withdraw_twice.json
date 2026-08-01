@@ -1,0 +1,13 @@
+{
+  "id": "t3_withdraw_twice",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Withdraw `first` then `second` from balance in sequence. Return Err(\"insufficient funds\") if either withdrawal would make the balance negative, otherwise Ok(balance - first - second). Callers guarantee balance >= 0 and both amounts > 0.",
+  "hidden_tests": [
+    {"in": [100, 30, 20], "out": {"ok": 50}},
+    {"in": [100, 60, 50], "out": {"err": "insufficient funds"}},
+    {"in": [10, 5, 5], "out": {"ok": 0}},
+    {"in": [1, 1, 1], "out": {"err": "insufficient funds"}},
+    {"in": [50, 1, 1], "out": {"ok": 48}}
+  ]
+}

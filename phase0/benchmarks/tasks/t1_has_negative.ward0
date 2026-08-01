@@ -1,0 +1,12 @@
+fn has_negative(xs: List<int>) -> bool
+  ensures result == (exists i in range(0, len(xs)) :: xs[i] < 0)
+{
+    for i in range(0, len(xs))
+      invariant forall j in range(0, i) :: xs[j] >= 0
+    {
+        if xs[i] < 0 {
+            return true;
+        }
+    }
+    return false;
+}

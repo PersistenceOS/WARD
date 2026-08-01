@@ -1,0 +1,13 @@
+{
+  "id": "t1_divisible",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return true if a is divisible by b without remainder, false otherwise. Callers guarantee b != 0.",
+  "hidden_tests": [
+    {"in": [10, 5], "out": true},
+    {"in": [10, 3], "out": false},
+    {"in": [0, 7], "out": true},
+    {"in": [-10, 5], "out": true},
+    {"in": [7, 1], "out": true}
+  ]
+}

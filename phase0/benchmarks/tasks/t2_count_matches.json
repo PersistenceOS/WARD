@@ -1,0 +1,13 @@
+{
+  "id": "t2_count_matches",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Count the number of indices i where xs[i] == ys[i]. Callers guarantee len(xs) == len(ys).",
+  "hidden_tests": [
+    {"in": [[1, 2, 3], [1, 2, 4]], "out": 2},
+    {"in": [[], []], "out": 0},
+    {"in": [[1, 1], [1, 1]], "out": 2},
+    {"in": [[1, 2], [2, 1]], "out": 0},
+    {"in": [[0], [0]], "out": 1}
+  ]
+}

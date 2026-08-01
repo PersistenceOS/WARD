@@ -1,0 +1,13 @@
+{
+  "id": "t1_list_min",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return the smallest element of xs. Callers guarantee xs is non-empty.",
+  "hidden_tests": [
+    {"in": [[3, 1, 2]], "out": 1},
+    {"in": [[5]], "out": 5},
+    {"in": [[-1, -5, 0]], "out": -5},
+    {"in": [[7, 7, 7]], "out": 7},
+    {"in": [[0, -3, -3, 2]], "out": -3}
+  ]
+}

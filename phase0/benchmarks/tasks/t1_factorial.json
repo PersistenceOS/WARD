@@ -1,0 +1,13 @@
+{
+  "id": "t1_factorial",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return n! = 1 * 2 * ... * n. n is in [0, 12]. Note 0! = 1.",
+  "hidden_tests": [
+    {"in": [0], "out": 1},
+    {"in": [1], "out": 1},
+    {"in": [5], "out": 120},
+    {"in": [10], "out": 3628800},
+    {"in": [12], "out": 479001600}
+  ]
+}

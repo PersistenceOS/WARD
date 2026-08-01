@@ -1,0 +1,22 @@
+{
+  "id": "b5_currency",
+  "buggy": true,
+  "spec": "Implement `convert`: convert an amount from one currency to another. Same-currency conversions always succeed and return the amount unchanged. Cross-currency conversions succeed only up to an internal amount cap; beyond it the converter returns Err(\"rate unavailable\").",
+  "fn": "convert",
+  "extern": {
+    "name": "currency_convert",
+    "params": [["src_cur", "str"], ["dst_cur", "str"], ["amount", "int"]],
+    "ret": "Result<int, str>",
+    "contract": "requires amount >= 0\nensures is_ok(result) == (src_cur == dst_cur or amount <= 10000)",
+    "impl": "def currency_convert_stub(src_cur, dst_cur, amount):\n    if src_cur == dst_cur or amount <= 20000:\n        return (\"ok\", amount)\n    return (\"err\", \"rate unavailable\")\n",
+    "contract_py": "lambda src_cur, dst_cur, amount, out: (out[0] == 'ok') == (src_cur == dst_cur or amount <= 10000)"
+  },
+  "hidden_tests": [
+    {"in": ["USD", "USD", 5000], "out": {"ok": 5000}},
+    {"in": ["USD", "EUR", 100], "out": {"ok": 100}},
+    {"in": ["USD", "EUR", 10000], "out": {"ok": 10000}},
+    {"in": ["USD", "EUR", 15000], "out": {"err": "contract violation"}, "violation": true},
+    {"in": ["USD", "EUR", 20000], "out": {"err": "contract violation"}, "violation": true},
+    {"in": ["USD", "EUR", 25000], "out": {"err": "rate unavailable"}}
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "b3_db",
+  "buggy": true,
+  "spec": "Implement `get_balance`: fetch a user's stored balance from the accounts database. The database only serves small accounts — balances are 100 + user_id — and returns Err(\"no such user\") for accounts outside its range. On success the balance is Ok(balance).",
+  "fn": "get_balance",
+  "extern": {
+    "name": "db_get_balance",
+    "params": [["user_id", "int"]],
+    "ret": "Result<int, str>",
+    "contract": "requires user_id > 0\nensures is_ok(result) == (user_id < 100)",
+    "impl": "def db_get_balance_stub(user_id):\n    if user_id < 150:\n        return (\"ok\", 100 + user_id)\n    return (\"err\", \"no such user\")\n",
+    "contract_py": "lambda user_id, out: (out[0] == 'ok') == (user_id < 100)"
+  },
+  "hidden_tests": [
+    {"in": [10], "out": {"ok": 110}},
+    {"in": [99], "out": {"ok": 199}},
+    {"in": [100], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [130], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [149], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [200], "out": {"err": "no such user"}},
+    {"in": [1000], "out": {"err": "no such user"}}
+  ]
+}

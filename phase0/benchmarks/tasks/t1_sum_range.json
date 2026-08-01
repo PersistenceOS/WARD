@@ -1,0 +1,13 @@
+{
+  "id": "t1_sum_range",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return the sum lo + (lo+1) + ... + hi (inclusive). Callers guarantee 0 <= lo <= hi.",
+  "hidden_tests": [
+    {"in": [1, 5], "out": 15},
+    {"in": [0, 0], "out": 0},
+    {"in": [5, 5], "out": 5},
+    {"in": [0, 10], "out": 55},
+    {"in": [3, 7], "out": 25}
+  ]
+}

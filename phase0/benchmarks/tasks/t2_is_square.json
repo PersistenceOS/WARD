@@ -1,0 +1,14 @@
+{
+  "id": "t2_is_square",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if n is a perfect square (there exists an integer k >= 0 with k*k == n), false otherwise. Callers guarantee n >= 0.",
+  "hidden_tests": [
+    {"in": [0], "out": true},
+    {"in": [1], "out": true},
+    {"in": [4], "out": true},
+    {"in": [9], "out": true},
+    {"in": [10], "out": false},
+    {"in": [2], "out": false}
+  ]
+}

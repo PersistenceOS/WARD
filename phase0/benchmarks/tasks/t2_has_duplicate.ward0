@@ -1,0 +1,16 @@
+fn has_duplicate(xs: List<int>) -> bool
+  ensures result == (exists i in range(0, len(xs)) :: exists j in range(i + 1, len(xs)) :: xs[i] == xs[j])
+{
+    for i in range(0, len(xs))
+      invariant forall i2 in range(0, i) :: not (exists j2 in range(i2 + 1, len(xs)) :: xs[i2] == xs[j2])
+    {
+        for j in range(i + 1, len(xs))
+          invariant forall j2 in range(i + 1, j) :: xs[i] != xs[j2]
+        {
+            if xs[i] == xs[j] {
+                return true;
+            }
+        }
+    }
+    return false;
+}

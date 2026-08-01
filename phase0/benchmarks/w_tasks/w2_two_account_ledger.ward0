@@ -1,0 +1,20 @@
+// W2 two-account ledger - reference caller (trust-arm: full contracts; defensive checks)
+fn transfer(balance: int, credit_bal: int, amount: int) -> Result<int, str>
+  requires balance >= 0
+  requires credit_bal >= 0
+  requires amount >= 0
+  ensures is_ok(result) == (amount <= balance)
+{
+    var d: Result<int, str> = ledger_debit(balance, amount);
+    if is_ok(d) != (amount <= balance) {
+        return Err("contract violation");
+    }
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    var c: Result<int, str> = ledger_credit(credit_bal, amount);
+    if is_err(c) {
+        return Err("contract violation");
+    }
+    return Ok(unwrap_ok(d));
+}

@@ -1,0 +1,16 @@
+// Tier 1 - Trivial (array search)
+// id: t1_is_sorted
+fn is_sorted(xs: List<int>) -> bool
+{
+    if len(xs) == 0 {
+        return true;
+    }
+    for i in range(0, len(xs) - 1)
+      invariant i <= len(xs) - 1
+    {
+        if xs[i] > xs[i + 1] {
+            return false;
+        }
+    }
+    return true;
+}

@@ -1,0 +1,13 @@
+{
+  "id": "t2_transfer",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Transfer `amount` from one account to another. Return Err(\"insufficient funds\") if amount > from_bal, otherwise Ok(()) (the transfer itself succeeds). Callers guarantee both balances >= 0 and amount > 0.",
+  "hidden_tests": [
+    {"in": [100, 50, 30], "out": {"ok": null}},
+    {"in": [10, 0, 20], "out": {"err": "insufficient funds"}},
+    {"in": [50, 50, 50], "out": {"ok": null}},
+    {"in": [0, 100, 1], "out": {"err": "insufficient funds"}},
+    {"in": [5, 5, 5], "out": {"ok": null}}
+  ]
+}

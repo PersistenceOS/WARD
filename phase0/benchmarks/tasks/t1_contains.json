@@ -1,0 +1,13 @@
+{
+  "id": "t1_contains",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return true if v occurs in xs, false otherwise.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3], 2], "out": true},
+    {"in": [[1, 2, 3], 5], "out": false},
+    {"in": [[], 0], "out": false},
+    {"in": [[7], 7], "out": true},
+    {"in": [[7], 6], "out": false}
+  ]
+}

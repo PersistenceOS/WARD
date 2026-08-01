@@ -1,0 +1,13 @@
+{
+  "id": "t2_dot_product",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the dot product sum(xs[i] * ys[i]). Callers guarantee len(xs) == len(ys) and every element of both lists is >= 0.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3], [1, 2, 3]], "out": 14},
+    {"in": [[0, 0], [5, 5]], "out": 0},
+    {"in": [[1, 1], [1, 1]], "out": 2},
+    {"in": [[2, 3], [4, 5]], "out": 23},
+    {"in": [[0], [0]], "out": 0}
+  ]
+}

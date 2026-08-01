@@ -1,0 +1,14 @@
+// B2 auth - baseline-arm reference (no stub contract)
+fn verify_otp(otp: int, user_id: int) -> Result<Unit, str>
+  requires otp >= 0
+  ensures is_ok(result) or is_err(result)
+{
+    var r: Result<Unit, str> = otp_service(otp, user_id);
+    if is_ok(r) != (otp == 123456) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

@@ -1,0 +1,13 @@
+fn count_value(xs: List<int>, v: int) -> int
+  ensures result >= 0
+{
+    var n: int = 0;
+    for i in range(0, len(xs))
+      invariant n >= 0
+    {
+        if xs[i] == v {
+            n += 1;
+        }
+    }
+    return n;
+}

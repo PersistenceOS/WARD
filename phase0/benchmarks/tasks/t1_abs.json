@@ -1,0 +1,13 @@
+{
+  "id": "t1_abs",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return the absolute value of x: x when x >= 0, otherwise -x.",
+  "hidden_tests": [
+    {"in": [5], "out": 5},
+    {"in": [-5], "out": 5},
+    {"in": [0], "out": 0},
+    {"in": [-123], "out": 123},
+    {"in": [7], "out": 7}
+  ]
+}

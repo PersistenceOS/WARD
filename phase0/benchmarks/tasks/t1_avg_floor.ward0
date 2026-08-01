@@ -1,0 +1,13 @@
+fn avg_floor(xs: List<int>) -> int
+  requires len(xs) > 0
+  requires forall i in range(0, len(xs)) :: xs[i] >= 0
+  ensures result >= 0
+{
+    var sum: int = 0;
+    for i in range(0, len(xs))
+      invariant sum >= 0
+    {
+        sum += xs[i];
+    }
+    return sum / len(xs);
+}

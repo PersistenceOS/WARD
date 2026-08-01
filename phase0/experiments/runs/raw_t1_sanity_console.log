@@ -1,0 +1,9 @@
+[1/2] t1_abs (tier 1)...
+    -> SOLVED (pass, 16s) | elapsed 16s, avg 16s/task, ETA 16s
+[2/2] t1_is_even (tier 1)...
+    -> SOLVED (pass, 7s) | elapsed 23s, avg 12s/task, ETA 0s
+tasks: 2  solved: 2  pass@2: 1.000
+  tier 1: 2/2 solved
+  pass@1: 1
+  pass@2: 2
+  attempt outcomes: {'parse_error': 1, 'pass': 2}

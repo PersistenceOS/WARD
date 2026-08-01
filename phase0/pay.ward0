@@ -1,0 +1,6 @@
+fn pay(amount: int, token: str) -> Result<Unit, str>
+  requires amount > 0
+  ensures is_ok(result) == (amount <= 100)
+{
+    return stripe_charge(amount, token);
+}

@@ -1,0 +1,14 @@
+fn index_of(xs: List<int>, v: int) -> int
+  ensures result >= -1 and result < len(xs)
+  ensures result == -1 or xs[result] == v
+  ensures result != -1 or not (exists i in range(0, len(xs)) :: xs[i] == v)
+{
+    for i in range(0, len(xs))
+      invariant forall j in range(0, i) :: xs[j] != v
+    {
+        if xs[i] == v {
+            return i;
+        }
+    }
+    return -1;
+}

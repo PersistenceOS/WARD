@@ -1,0 +1,48 @@
+{
+  "id": "w2_two_account_ledger",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "transfer",
+  "tiers": {
+    "transfer": "Proven"
+  },
+  "spec": "Implement `transfer`: move an amount between two account balances. The ledger debits the source account when funds suffice, returning the new source balance as Ok(new_balance); otherwise it returns Err(\"insufficient funds\"). The credit side of the ledger records the deposit and always succeeds for non-negative amounts. A successful transfer returns the new source balance. The caller must detect when the ledger's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "ledger_debit",
+      "params": [["balance", "int"], ["amount", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires balance >= 0\nrequires amount >= 0\nensures is_ok(result) == (amount <= balance)\nensures (not is_ok(result)) or unwrap_ok(result) == balance - amount",
+      "impl": "def ledger_debit_stub(balance, amount):\n    if amount <= balance + 20:\n        return (\"ok\", balance - amount)\n    return (\"err\", \"insufficient funds\")\n",
+      "contract_py": "lambda balance, amount, out: (out[0] == 'ok') == (amount <= balance)",
+      "violation_probes": [
+        {"in": [100, 30], "violation": false},
+        {"in": [100, 110], "violation": true},
+        {"in": [100, 130], "violation": false}
+      ]
+    },
+    {
+      "name": "ledger_credit",
+      "params": [["balance", "int"], ["amount", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires balance >= 0\nrequires amount >= 0\nensures is_ok(result)\nensures unwrap_ok(result) == balance + amount",
+      "impl": "def ledger_credit_stub(balance, amount):\n    return (\"ok\", balance + amount)\n",
+      "contract_py": "lambda balance, amount, out: (out[0] == 'ok') and (out[1] == balance + amount)",
+      "violation_probes": [
+        {"in": [100, 30], "violation": false},
+        {"in": [0, 0], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} ledger_debit(balance: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok? == (amount <= balance)\n  ensures !result.Ok? || result.value == balance - amount\n\nmethod {:extern}{:axiom} ledger_credit(balance: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok?\n  ensures result.value == balance + amount",
+  "reference_dafny_caller": "method transfer(balance: int, credit_bal: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires credit_bal >= 0\n  requires amount >= 0\n  ensures result.Ok? == (amount <= balance)\n{\n  var d := ledger_debit(balance, amount);\n  if d.Ok? != (amount <= balance) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  var c := ledger_credit(credit_bal, amount);\n  if !c.Ok? {\n    result := Err(\"contract violation\");\n    return;\n  }\n  result := Ok(d.value);\n}",
+  "hidden_tests": [
+    {"in": [100, 200, 30], "out": {"ok": 70}},
+    {"in": [100, 200, 100], "out": {"ok": 0}},
+    {"in": [50, 200, 60], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [50, 200, 80], "out": {"err": "insufficient funds"}},
+    {"in": [0, 0, 0], "out": {"ok": 0}},
+    {"in": [100, 200, 110], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [100, 200, 130], "out": {"err": "insufficient funds"}}
+  ]
+}

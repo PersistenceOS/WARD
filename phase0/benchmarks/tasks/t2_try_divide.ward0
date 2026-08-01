@@ -1,0 +1,9 @@
+fn try_divide(a: int, b: int) -> Result<int, str>
+  ensures is_ok(result) == (b != 0)
+  ensures not is_ok(result) or unwrap_ok(result) == a / b
+{
+    if b == 0 {
+        return Err("division by zero");
+    }
+    return Ok(a / b);
+}

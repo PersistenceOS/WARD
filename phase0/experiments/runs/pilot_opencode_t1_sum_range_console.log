@@ -1,0 +1,7 @@
+[1/1] t1_sum_range (tier 1)...
+    -> SOLVED (pass, 16s) | elapsed 16s, avg 16s/task, ETA 0s
+tasks: 1  solved: 1  pass@2: 1.000
+  tier 1: 1/1 solved
+  pass@1: 1
+  pass@2: 1
+  attempt outcomes: {'pass': 1}

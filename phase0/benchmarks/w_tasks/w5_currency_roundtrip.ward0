@@ -1,0 +1,19 @@
+// W5 currency round-trip - reference caller (Proven tier)
+fn round_trip(amount: int) -> Result<int, str>
+  requires amount >= 0
+  ensures is_ok(result) == (amount <= 500)
+{
+    var a: Result<int, str> = fx_convert(amount, 1);
+    if is_err(a) {
+        return Err("contract violation");
+    }
+    var av: int = unwrap_ok(a);
+    var b: Result<int, str> = fx_convert(av, 2);
+    if is_ok(b) != (av <= 1000) {
+        return Err("contract violation");
+    }
+    if is_err(b) {
+        return Err(unwrap_err(b));
+    }
+    return Ok(unwrap_ok(b));
+}

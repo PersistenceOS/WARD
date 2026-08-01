@@ -1,0 +1,239 @@
+{
+  "rows_total": 228968,
+  "rows_parse_failed": 0,
+  "row_kinds": {
+    "events": 26602,
+    "qa": 4797,
+    "other": 9915,
+    "conversation": 187654
+  },
+  "row_kind_pct": {
+    "events": 11.6,
+    "qa": 2.1,
+    "other": 4.3,
+    "conversation": 82.0
+  },
+  "files_analyzed": [
+    "train-00000-of-00004.parquet",
+    "train-00001-of-00004.parquet",
+    "train-00002-of-00004.parquet",
+    "train-00003-of-00004.parquet"
+  ],
+  "sessions": {
+    "with_explicit_id": 6464,
+    "idless_conversation_rows": 175175,
+    "total_estimated": 181639
+  },
+  "row_stats": {
+    "tool_use_rows": 52386,
+    "tool_use_pct": 22.9,
+    "event_types": {
+      "assistant": 16057,
+      "user": 10545
+    },
+    "events_per_session_median": 1.0,
+    "conversation_rows": 187654,
+    "conversation_msg_median": 3.0
+  },
+  "explicit_fields": {
+    "lang": {
+      "seed-authoring": 5145,
+      "en": 2000,
+      "python": 1572,
+      "go": 1067,
+      "non-code": 990,
+      "ts": 930,
+      "java": 439,
+      "powershell": 398,
+      "csharp": 337,
+      "rust": 293,
+      "bash": 169,
+      "c": 128,
+      "ruby": 108,
+      "py": 100,
+      "zsh": 89,
+      "cpp": 81,
+      "English": 50,
+      "js": 32,
+      "typescript": 10
+    },
+    "domain": {
+      "agent": 7889
+    },
+    "verifier": {
+      "acceptance-tests+protected-file-hash+independent-review": 138
+    },
+    "rows_with_task": 13938,
+    "task_shapes": {
+      "seed-author-w7-7g2-20260716t111141.632164z": 195,
+      "seed-author-w5-5w3-20260716t041311.330104z": 189,
+      "seed-author-w5-5c3-20260716t023028.835096z": 179,
+      "seed-author-w7-7g4-20260716t121306.009515z": 167,
+      "seed-author-w7-7g8-20260716t142601.889652z": 166,
+      "seed-author-w6-6p10-20260716t101111.152048z": 154,
+      "seed-author-w5-5c4-20260716t025815.526658z": 153,
+      "seed-author-w5-5w2-20260716t034645.410474z": 153,
+      "seed-author-w5-5e5-20260716t011402.208358z": 146,
+      "seed-author-w6-6p7-20260716t082555.654597z": 143,
+      "seed-author-w5-5w5-20260716t051135.108425z": 142,
+      "seed-author-w5-5s1-20260715t222117.389399z": 133,
+      "seed-author-w7-7g9-20260716t150839.700068z": 133,
+      "seed-author-w5-5e3-20260716t002827.279813z": 129,
+      "seed-author-w7-7g5-20260716t125005.817716z": 128
+    },
+    "tools_used": {
+      "Read": 4616,
+      "Bash": 4595,
+      "Write": 3192,
+      "Edit": 2079,
+      "ToolSearch": 1508,
+      "WebSearch": 1140,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Bash\",\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"}},\"additionalProperties\":true,\"required\":[\"command\",\"description\"]}}}": 1124,
+      "WebFetch": 1100,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Edit\",\"parameters\":{\"type\":\"object\",\"properties\":{\"file_path\":{\"type\":\"string\"},\"new_string\":{\"type\":\"string\"},\"old_string\":{\"type\":\"string\"},\"replace_all\":{\"type\":\"boolean\"}},\"additionalProperties\":true,\"required\":[\"file_path\",\"new_string\",\"old_string\",\"replace_all\"]}}}": 897,
+      "TaskCreate": 581,
+      "TaskUpdate": 560,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Read\",\"parameters\":{\"type\":\"object\",\"properties\":{\"file_path\":{\"type\":\"string\"}},\"additionalProperties\":true,\"required\":[\"file_path\"]}}}": 307,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Write\",\"parameters\":{\"type\":\"object\",\"properties\":{\"content\":{\"type\":\"string\"},\"file_path\":{\"type\":\"string\"}},\"additionalProperties\":true,\"required\":[\"content\",\"file_path\"]}}}": 282,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Bash\",\"parameters\":{\"type\":\"object\",\"properties\":{\"command\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"timeout\":{\"type\":\"integer\"}},\"additionalProperties\":true,\"required\":[\"command\",\"description\",\"timeout\"]}}}": 282,
+      "bash": 138,
+      "{\"type\":\"function\",\"function\":{\"name\":\"BashOutput\",\"description\":\"Read output from a running background shell command.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"bash_id\":{\"type\":\"string\"},\"filter\":{\"type\":\"string\"}},\"required\":[\"bash_id\"],\"additionalProperties\":true}}}": 126,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Edit\",\"description\":\"Replace text in an existing file.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"file_path\":{\"type\":\"string\"},\"old_string\":{\"type\":\"string\"},\"new_string\":{\"type\":\"string\"},\"replace_all\":{\"type\":\"boolean\"}},\"required\":[\"file_path\",\"old_string\",\"new_string\"],\"additionalProperties\":true}}}": 126,
+      "{\"type\":\"function\",\"function\":{\"name\":\"Glob\",\"description\":\"Find files by glob pattern.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"pattern\":{\"type\":\"string\"},\"path\":{\"type\":\"string\"}},\"required\":[\"pattern\"],\"additionalProperties\":true}}}": 126,
+      "{\"type\":\"function\",\"function\":{\"name\":\"KillBash\",\"description\":\"Stop a running background shell command.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"shell_id\":{\"type\":\"string\"}},\"required\":[\"shell_id\"],\"additionalProperties\":true}}}": 126,
+      "{\"type\":\"function\",\"function\":{\"name\":\"LS\",\"description\":\"List files and directories.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"ignore\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}},\"required\":[\"path\"],\"additionalProperties\":true}}}": 126
+    }
+  },
+  "language_hits": {
+    "python": 54037,
+    "javascript": 25208,
+    "typescript": 22141,
+    "c/c++": 11063,
+    "html/css": 7916,
+    "java": 7906,
+    "go": 6310,
+    "rust": 5246,
+    "dafny": 4055,
+    "csharp": 3895,
+    "sql": 2845,
+    "lean": 1541
+  },
+  "per_source_rows": {
+    "Roman1111111/claude-sonnet-4.6-100000X-filtered": 107085,
+    "angrygiraffe/claude-opus-4.6-4.7-reasoning-8.7k": 17363,
+    "Met4physics/claude-opus-4-8-xhigh-reasoning-8.7k": 17348,
+    "1EYE4ALL/Fable-5-traces": 16979,
+    "greghavens/fable-5-coding-and-debugging-traces": 13938,
+    "armand0e/claude-fable-5-claude-code": 11947,
+    "Roman1111111/claude-opus-4.6-10000x": 9598,
+    "lordx64/fable-tool-use-sft": 5060,
+    "11-47/claude_opus_4.8_max_thinking_5k_v2": 4982,
+    "TeichAI/lordx64-claude-opus-4.7-max-cleaned": 4801,
+    "Swarm-AI-Research/fable5-traces-sft": 4501,
+    "Glint-Research/Fable-5-traces": 4460,
+    "lordx64/agentic-distill-fable-5-sft": 4171,
+    "Poumrm/Mythos-5-and-Fabel-5-Class-Model-Outputs": 1321,
+    "TeichAI/Claude-Sonnet-4.6-Reasoning-1100x": 1096,
+    "TeichAI/Claude-Opus-4.6-Reasoning-887x": 871,
+    "victor/fable-5-boeing-747-trace": 815,
+    "licongxu/fable5-flamingo-research-trace": 684,
+    "PawanKrd/claude-fable-5-code": 591,
+    "TheFusionCube/Fable-5-CoT-Traces": 347,
+    "armand0e/Fable-5-Chat": 347,
+    "TeichAI/claude-4.5-opus-high-reasoning-250x": 238,
+    "TeichAI/claude-sonnet-4.5-high-reasoning-250x": 232,
+    "cfahlgren1/Fable-5-traces": 107,
+    "suayptalha/fable-5-claude-code": 63,
+    "AlinCiocan/fable-5-claude-code-traces": 18,
+    "armand0e/claude-opus-4.8-pi-traces": 4,
+    "victor/claude-fable-worldcup-2026-session": 1
+  },
+  "per_source_kinds": {
+    "11-47/claude_opus_4.8_max_thinking_5k_v2": {
+      "conversation": 4982
+    },
+    "1EYE4ALL/Fable-5-traces": {
+      "events": 12529,
+      "qa": 4450
+    },
+    "AlinCiocan/fable-5-claude-code-traces": {
+      "conversation": 18
+    },
+    "Glint-Research/Fable-5-traces": {
+      "conversation": 4460
+    },
+    "Met4physics/claude-opus-4-8-xhigh-reasoning-8.7k": {
+      "conversation": 17348
+    },
+    "PawanKrd/claude-fable-5-code": {
+      "conversation": 591
+    },
+    "Poumrm/Mythos-5-and-Fabel-5-Class-Model-Outputs": {
+      "conversation": 10,
+      "events": 1311
+    },
+    "Roman1111111/claude-opus-4.6-10000x": {
+      "conversation": 9598
+    },
+    "Roman1111111/claude-sonnet-4.6-100000X-filtered": {
+      "conversation": 107085
+    },
+    "Swarm-AI-Research/fable5-traces-sft": {
+      "conversation": 4501
+    },
+    "TeichAI/Claude-Opus-4.6-Reasoning-887x": {
+      "conversation": 871
+    },
+    "TeichAI/Claude-Sonnet-4.6-Reasoning-1100x": {
+      "conversation": 1096
+    },
+    "TeichAI/claude-4.5-opus-high-reasoning-250x": {
+      "conversation": 238
+    },
+    "TeichAI/claude-sonnet-4.5-high-reasoning-250x": {
+      "conversation": 232
+    },
+    "TeichAI/lordx64-claude-opus-4.7-max-cleaned": {
+      "conversation": 4801
+    },
+    "TheFusionCube/Fable-5-CoT-Traces": {
+      "qa": 347
+    },
+    "angrygiraffe/claude-opus-4.6-4.7-reasoning-8.7k": {
+      "conversation": 17363
+    },
+    "armand0e/Fable-5-Chat": {
+      "conversation": 347
+    },
+    "armand0e/claude-fable-5-claude-code": {
+      "events": 11947
+    },
+    "armand0e/claude-opus-4.8-pi-traces": {
+      "conversation": 4
+    },
+    "cfahlgren1/Fable-5-traces": {
+      "conversation": 107
+    },
+    "greghavens/fable-5-coding-and-debugging-traces": {
+      "conversation": 13938
+    },
+    "licongxu/fable5-flamingo-research-trace": {
+      "other": 684
+    },
+    "lordx64/agentic-distill-fable-5-sft": {
+      "other": 4171
+    },
+    "lordx64/fable-tool-use-sft": {
+      "other": 5060
+    },
+    "suayptalha/fable-5-claude-code": {
+      "conversation": 63
+    },
+    "victor/claude-fable-worldcup-2026-session": {
+      "conversation": 1
+    },
+    "victor/fable-5-boeing-747-trace": {
+      "events": 815
+    }
+  }
+}

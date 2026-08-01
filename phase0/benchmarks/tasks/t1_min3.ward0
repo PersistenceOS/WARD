@@ -1,0 +1,13 @@
+fn min3(a: int, b: int, c: int) -> int
+  ensures result <= a and result <= b and result <= c
+  ensures result == a or result == b or result == c
+{
+    var m: int = a;
+    if b < m {
+        m = b;
+    }
+    if c < m {
+        m = c;
+    }
+    return m;
+}

@@ -1,0 +1,15 @@
+fn has_consecutive_duplicates(xs: List<int>) -> bool
+  ensures result == (exists i in range(0, len(xs) - 1) :: xs[i] == xs[i + 1])
+{
+    if len(xs) < 2 {
+        return false;
+    }
+    for i in range(0, len(xs) - 1)
+      invariant forall j in range(0, i) :: xs[j] != xs[j + 1]
+    {
+        if xs[i] == xs[i + 1] {
+            return true;
+        }
+    }
+    return false;
+}

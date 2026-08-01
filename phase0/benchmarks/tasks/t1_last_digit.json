@@ -1,0 +1,13 @@
+{
+  "id": "t1_last_digit",
+  "tier": 1,
+  "holdout": false,
+  "spec": "Return the last decimal digit of n (n % 10). Callers guarantee n >= 0.",
+  "hidden_tests": [
+    {"in": [12345], "out": 5},
+    {"in": [0], "out": 0},
+    {"in": [100], "out": 0},
+    {"in": [7], "out": 7},
+    {"in": [987654321], "out": 1}
+  ]
+}

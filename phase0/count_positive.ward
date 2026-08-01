@@ -1,0 +1,15 @@
+fn count_positive(xs: List<int>) -> int
+  ensures result >= 0
+  ensures result <= len(xs)
+{
+    var count: int = 0;
+    for i in range(0, len(xs))
+      invariant count >= 0
+      invariant count <= i
+    {
+        if xs[i] > 0 {
+            count += 1;
+        }
+    }
+    return count;
+}

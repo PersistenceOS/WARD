@@ -1,0 +1,14 @@
+{
+  "id": "t2_is_palindrome",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if xs reads the same forwards and backwards (xs[i] == xs[len-1-i] for all i < len/2), false otherwise.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3, 2, 1]], "out": true},
+    {"in": [[1, 2, 3, 3, 2, 1]], "out": true},
+    {"in": [[1, 2, 3]], "out": false},
+    {"in": [[]], "out": true},
+    {"in": [[1]], "out": true},
+    {"in": [[1, 2, 1, 2]], "out": false}
+  ]
+}

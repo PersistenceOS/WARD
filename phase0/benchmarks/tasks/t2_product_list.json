@@ -1,0 +1,13 @@
+{
+  "id": "t2_product_list",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the product of all elements of xs (empty list has product 1). Callers guarantee every element of xs is >= 0.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3, 4]], "out": 24},
+    {"in": [[]], "out": 1},
+    {"in": [[0, 5]], "out": 0},
+    {"in": [[2, 2, 2]], "out": 8},
+    {"in": [[1]], "out": 1}
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "id": "w8_multi_currency_ledger",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "convert_transfer",
+  "tiers": {
+    "convert_transfer": "Proven"
+  },
+  "spec": "Implement `convert_transfer`: move an amount between a source balance and a target currency. First fetch the conversion rate for the pair (supported pairs are 1..3; the rate is pair * 10; unsupported pairs are rejected with Err(\"unknown pair\")), then debit the source ledger when funds suffice, returning the new source balance as Ok. The ledger returns Err(\"insufficient funds\") otherwise. A successful transfer returns the new source balance converted to the target currency (new balance x rate). The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "fx_rate",
+      "params": [["pair", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires pair >= 1\nensures is_ok(result) == (pair <= 3)\nensures (not is_ok(result)) or unwrap_ok(result) == pair * 10",
+      "impl": "def fx_rate_stub(pair):\n    if pair <= 4:\n        return (\"ok\", pair * 10)\n    return (\"err\", \"unknown pair\")\n",
+      "contract_py": "lambda pair, out: (out[0] == 'ok') == (pair <= 3)",
+      "violation_probes": [
+        {"in": [1], "violation": false},
+        {"in": [3], "violation": false},
+        {"in": [4], "violation": true},
+        {"in": [5], "violation": false}
+      ]
+    },
+    {
+      "name": "ledger_debit",
+      "params": [["balance", "int"], ["amount", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires balance >= 0\nrequires amount >= 0\nensures is_ok(result) == (amount <= balance)\nensures (not is_ok(result)) or unwrap_ok(result) == balance - amount",
+      "impl": "def ledger_debit_stub(balance, amount):\n    if amount <= balance + 15:\n        return (\"ok\", balance - amount)\n    return (\"err\", \"insufficient funds\")\n",
+      "contract_py": "lambda balance, amount, out: (out[0] == 'ok') == (amount <= balance)",
+      "violation_probes": [
+        {"in": [100, 30], "violation": false},
+        {"in": [100, 100], "violation": false},
+        {"in": [100, 105], "violation": true},
+        {"in": [100, 120], "violation": false},
+        {"in": [100, 130], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} fx_rate(pair: int) returns (result: Result<int, string>)\n  requires pair >= 1\n  ensures result.Ok? == (pair <= 3)\n  ensures !result.Ok? || result.value == pair * 10\n\nmethod {:extern}{:axiom} ledger_debit(balance: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok? == (amount <= balance)\n  ensures !result.Ok? || result.value == balance - amount",
+  "reference_dafny_caller": "method convert_transfer(balance: int, amount: int, pair: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  requires pair >= 1\n  ensures result.Ok? == (amount <= balance && pair <= 3)\n{\n  var r := fx_rate(pair);\n  if r.Ok? != (pair <= 3) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  var d := ledger_debit(balance, amount);\n  if d.Ok? != (amount <= balance) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  result := Ok(d.value * r.value);\n}",
+  "hidden_tests": [
+    {"in": [100, 30, 1], "out": {"ok": 700}},
+    {"in": [100, 100, 2], "out": {"ok": 0}},
+    {"in": [50, 60, 1], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [50, 80, 1], "out": {"err": "insufficient funds"}},
+    {"in": [100, 30, 4], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [100, 30, 5], "out": {"err": "unknown pair"}},
+    {"in": [0, 0, 3], "out": {"ok": 0}}
+  ]
+}

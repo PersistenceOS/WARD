@@ -1,0 +1,23 @@
+// W8 multi-currency ledger - reference caller (Proven tier)
+fn convert_transfer(balance: int, amount: int, pair: int) -> Result<int, str>
+  requires balance >= 0
+  requires amount >= 0
+  requires pair >= 1
+  ensures is_ok(result) == (amount <= balance and pair <= 3)
+{
+    var r: Result<int, str> = fx_rate(pair);
+    if is_ok(r) != (pair <= 3) {
+        return Err("contract violation");
+    }
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    var d: Result<int, str> = ledger_debit(balance, amount);
+    if is_ok(d) != (amount <= balance) {
+        return Err("contract violation");
+    }
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    return Ok(unwrap_ok(d) * unwrap_ok(r));
+}

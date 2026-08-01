@@ -1,0 +1,14 @@
+// B3 db - trust-arm reference (stub contract known)
+fn get_balance(user_id: int) -> Result<int, str>
+  requires user_id > 0
+  ensures is_ok(result) == (user_id < 100)
+{
+    var r: Result<int, str> = db_get_balance(user_id);
+    if is_ok(r) != (user_id < 100) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

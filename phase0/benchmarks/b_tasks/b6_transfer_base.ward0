@@ -1,0 +1,15 @@
+// B6 transfer - baseline-arm reference (no stub contract)
+fn transfer(balance: int, amount: int) -> Result<int, str>
+  requires balance >= 0
+  requires amount >= 0
+  ensures is_ok(result) or is_err(result)
+{
+    var r: Result<int, str> = ledger_transfer(balance, amount);
+    if is_ok(r) != (amount <= balance) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

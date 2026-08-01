@@ -1,0 +1,17 @@
+fn is_power_of_two(n: int) -> bool
+  requires n >= 1 and n <= 1000000000
+{
+    var m: int = n;
+    for i in range(0, 31)
+      invariant m >= 1
+    {
+        if m == 1 {
+            return true;
+        }
+        if m % 2 == 1 {
+            return false;
+        }
+        m = m / 2;
+    }
+    return false;
+}

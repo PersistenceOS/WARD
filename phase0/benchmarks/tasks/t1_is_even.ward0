@@ -1,0 +1,5 @@
+fn is_even(n: int) -> bool
+  ensures result == (n % 2 == 0)
+{
+    return n % 2 == 0;
+}

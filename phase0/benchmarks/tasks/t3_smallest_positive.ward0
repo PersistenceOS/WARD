@@ -1,0 +1,18 @@
+fn smallest_positive(xs: List<int>) -> int
+  requires len(xs) > 0
+  ensures result == -1 or result > 0
+  ensures result == -1 or (exists j in range(0, len(xs)) :: xs[j] == result)
+  ensures result == -1 or (forall i in range(0, len(xs)) :: not xs[i] > 0 or xs[i] >= result)
+{
+    var m: int = -1;
+    for i in range(0, len(xs))
+      invariant m == -1 or m > 0
+      invariant forall j in range(0, i) :: not xs[j] > 0 or (m != -1 and xs[j] >= m)
+      invariant m == -1 or (exists j in range(0, i) :: xs[j] == m)
+    {
+        if xs[i] > 0 and (m == -1 or xs[i] < m) {
+            m = xs[i];
+        }
+    }
+    return m;
+}

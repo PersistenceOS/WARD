@@ -1,0 +1,6 @@
+fn divisible(a: int, b: int) -> bool
+  requires b != 0
+  ensures result == (a % b == 0)
+{
+    return a % b == 0;
+}

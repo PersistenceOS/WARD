@@ -1,0 +1,13 @@
+// B4 rest - baseline-arm reference (no stub contract)
+fn post(url: str, body: str) -> Result<Unit, str>
+  ensures is_ok(result) or is_err(result)
+{
+    var r: Result<Unit, str> = http_post(url, body);
+    if is_ok(r) != (len(body) <= 1024) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

@@ -1,0 +1,22 @@
+// W4 order placement - reference caller (Proven tier)
+fn place_order(item: int, qty: int) -> Result<int, str>
+  requires item > 0
+  requires qty > 0
+  ensures is_ok(result) == (item < 1000 and qty <= 20)
+{
+    var s: Result<int, str> = stock_check(item, qty);
+    if is_ok(s) != (item < 1000) {
+        return Err("contract violation");
+    }
+    if is_err(s) {
+        return Err(unwrap_err(s));
+    }
+    var r: Result<Unit, str> = inventory_reserve(item, qty);
+    if is_ok(r) != (qty <= 20) {
+        return Err("contract violation");
+    }
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    return Ok(unwrap_ok(s));
+}

@@ -1,0 +1,13 @@
+fn is_square(n: int) -> bool
+  requires n >= 0
+  ensures result == (exists k in range(0, n + 1) :: k * k == n)
+{
+    for k in range(0, n + 1)
+      invariant forall j in range(0, k) :: j * j != n
+    {
+        if k * k == n {
+            return true;
+        }
+    }
+    return false;
+}

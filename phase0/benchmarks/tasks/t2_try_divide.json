@@ -1,0 +1,13 @@
+{
+  "id": "t2_try_divide",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return Ok(a / b) with integer (Euclidean, floor) division, or Err(\"division by zero\") when b == 0.",
+  "hidden_tests": [
+    {"in": [10, 5], "out": {"ok": 2}},
+    {"in": [7, 2], "out": {"ok": 3}},
+    {"in": [5, 0], "out": {"err": "division by zero"}},
+    {"in": [0, 3], "out": {"ok": 0}},
+    {"in": [-10, 3], "out": {"ok": -4}}
+  ]
+}

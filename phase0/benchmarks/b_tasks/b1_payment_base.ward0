@@ -1,0 +1,14 @@
+// B1 payment - baseline-arm reference (no stub contract)
+fn pay(amount: int, token: str) -> Result<Unit, str>
+  requires amount > 0
+  ensures is_ok(result) or is_err(result)
+{
+    var r: Result<Unit, str> = stripe_charge(amount, token);
+    if is_ok(r) != (amount <= 100) {
+        return Err("contract violation");
+    }
+    if is_ok(r) {
+        return Ok(unwrap_ok(r));
+    }
+    return Err(unwrap_err(r));
+}

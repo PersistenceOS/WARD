@@ -1,0 +1,12 @@
+fn withdraw(balance: int, amount: int) -> Result<int, str>
+  requires balance >= 0
+  requires amount > 0
+  ensures is_err(result) == (balance < amount)
+  ensures not is_ok(result) or unwrap_ok(result) == balance - amount
+  ensures not is_ok(result) or unwrap_ok(result) >= 0
+{
+    if balance < amount {
+        return Err("insufficient funds");
+    }
+    return Ok(balance - amount);
+}

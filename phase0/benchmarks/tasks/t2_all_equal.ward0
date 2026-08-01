@@ -1,0 +1,13 @@
+fn all_equal(xs: List<int>) -> bool
+  requires len(xs) > 0
+  ensures result == (forall i in range(0, len(xs)) :: xs[i] == xs[0])
+{
+    for i in range(1, len(xs))
+      invariant forall j in range(0, i) :: xs[j] == xs[0]
+    {
+        if xs[i] != xs[0] {
+            return false;
+        }
+    }
+    return true;
+}

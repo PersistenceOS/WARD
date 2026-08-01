@@ -1,0 +1,11 @@
+fn withdraw_twice(balance: int, first: int, second: int) -> Result<int, str>
+  requires balance >= 0 and first > 0 and second > 0
+  ensures is_err(result) == (balance < first + second)
+  ensures not is_ok(result) or unwrap_ok(result) == balance - first - second
+  ensures not is_ok(result) or unwrap_ok(result) >= 0
+{
+    if balance < first + second {
+        return Err("insufficient funds");
+    }
+    return Ok(balance - first - second);
+}

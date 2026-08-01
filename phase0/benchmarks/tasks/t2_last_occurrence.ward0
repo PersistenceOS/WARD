@@ -1,0 +1,17 @@
+fn last_occurrence(xs: List<int>, v: int) -> int
+  ensures result >= -1 and result < len(xs)
+  ensures result == -1 or xs[result] == v
+  ensures result != -1 or not (exists i in range(0, len(xs)) :: xs[i] == v)
+{
+    var last: int = -1;
+    for i in range(0, len(xs))
+      invariant last >= -1 and last < len(xs)
+      invariant last == -1 or xs[last] == v
+      invariant forall j in range(0, i) :: not xs[j] == v or j <= last
+    {
+        if xs[i] == v {
+            last = i;
+        }
+    }
+    return last;
+}

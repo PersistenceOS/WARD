@@ -1,0 +1,13 @@
+fn pow(base: int, e: int) -> int
+  requires base >= 0
+  requires e >= 0 and e <= 20
+  ensures result >= 0
+{
+    var acc: int = 1;
+    for i in range(0, e)
+      invariant acc >= 0
+    {
+        acc *= base;
+    }
+    return acc;
+}

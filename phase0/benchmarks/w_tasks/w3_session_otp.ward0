@@ -1,0 +1,23 @@
+// W3 session/OTP - reference caller (Contracted tier)
+fn login(token: int, phone: int, code: int) -> Result<Unit, str>
+  requires token >= 0
+  requires phone >= 0
+  requires code >= 0
+  ensures is_ok(result) == (token >= 1000 and code == phone + 1000)
+{
+    var s: Result<Unit, str> = session_valid(token);
+    if is_ok(s) != (token >= 1000) {
+        return Err("contract violation");
+    }
+    if is_err(s) {
+        return Err(unwrap_err(s));
+    }
+    var o: Result<Unit, str> = otp_check(phone, code);
+    if is_ok(o) != (code == phone + 1000) {
+        return Err("contract violation");
+    }
+    if is_err(o) {
+        return Err(unwrap_err(o));
+    }
+    return Ok(unwrap_ok(o));
+}

@@ -1,0 +1,14 @@
+fn count_in_range(xs: List<int>, lo: int, hi: int) -> int
+  requires lo <= hi
+  ensures result >= 0
+{
+    var n: int = 0;
+    for i in range(0, len(xs))
+      invariant n >= 0
+    {
+        if xs[i] >= lo and xs[i] <= hi {
+            n += 1;
+        }
+    }
+    return n;
+}

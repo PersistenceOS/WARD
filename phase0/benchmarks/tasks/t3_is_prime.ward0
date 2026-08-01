@@ -1,0 +1,13 @@
+fn is_prime(n: int) -> bool
+  requires n >= 2
+  ensures result == (forall i in range(2, n) :: n % i != 0)
+{
+    for i in range(2, n)
+      invariant forall j in range(2, i) :: n % j != 0
+    {
+        if n % i == 0 {
+            return false;
+        }
+    }
+    return true;
+}

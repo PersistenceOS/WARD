@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WARD — A Frontier Verification Language</title>
+<meta name="description" content="Ward is a Python/TypeScript-shaped surface language that deterministically elaborates into Dafny — machine-checked correctness for AI-authored full-stack code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════ NAV ═══════════ -->
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="brand">
+      <span class="brand-mark">🛡️</span>
+      <span class="brand-name">WARD</span>
+      <span class="brand-tag">v0.1 · research</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#language">Language</a>
+      <a href="#tiers">Tiers</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#results">Results</a>
+      <a href="https://github.com/PersistenceOS/WARD" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">GitHub ↗</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero" id="top">
+  <div class="hero-bg" aria-hidden="true">
+    <div class="grid-lines"></div>
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="scanline"></div>
+  </div>
+
+  <div class="hero-inner">
+    <div class="hero-badge reveal">
+      <span class="pulse-dot"></span>
+      Frontier verification language · Phase 1 complete · Conditional GO
+    </div>
+
+    <h1 class="hero-title reveal">
+      Write it in <span class="grad-text">words</span>.<br>
+      Prove it in <span class="grad-text grad-alt">math</span>.
+    </h1>
+
+    <p class="hero-sub reveal">
+      WARD is a Python/TypeScript-shaped surface language that <strong>deterministically elaborates
+      into Dafny</strong> — giving AI-authored programs machine-checked correctness without forcing
+      models to write off-distribution formal syntax.
+    </p>
+
+    <div class="hero-cta reveal">
+      <a href="https://github.com/PersistenceOS/WARD" class="btn btn-primary" target="_blank" rel="noopener">
+        ⭐ Star on GitHub
+      </a>
+      <a href="#language" class="btn btn-ghost">See the language ↓</a>
+    </div>
+
+    <div class="hero-stats reveal">
+      <div class="stat"><span class="stat-num">57/57</span><span class="stat-label">test suites green</span></div>
+      <div class="stat"><span class="stat-num">62/62</span><span class="stat-label">oracle pass@1</span></div>
+      <div class="stat"><span class="stat-num">0/20</span><span class="stat-label">boundary leaks (W arm)</span></div>
+      <div class="stat"><span class="stat-num">8/8</span><span class="stat-label">Phase-1 W solved</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ MANIFESTO ═══════════ -->
+<section class="manifesto" id="manifesto">
+  <div class="container">
+    <blockquote class="quote reveal">
+      "Compiles" means <em>provably satisfies its stated contract, at whatever tier that contract
+      requires</em> — not "type-checks and looks plausible," and not "everything must be a theorem."
+    </blockquote>
+  </div>
+</section>
+
+<!-- ═══════════ LANGUAGE ═══════════ -->
+<section class="section" id="language">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">§ Language</span>
+      <h2>The model writes familiar code.<br>The checker keeps its promises.</h2>
+      <p>
+        Ward's <strong>surface layer</strong> (what the model writes) is Python/TypeScript-shaped —
+        the syntax best represented in training corpora. A deterministic elaborator compiles it to a
+        strict core, and Dafny + Z3 prove the contracts. The model never hand-writes dependent types,
+        ownership annotations, or proof scripts.
+      </p>
+    </div>
+
+    <div class="lang-grid">
+      <div class="code-card reveal">
+        <div class="code-head">
+          <span class="code-dots"><i></i><i></i><i></i></span>
+          <span class="code-file">sum_between.ward0</span>
+          <button class="copy-btn" data-copy-target="code-example">copy</button>
+        </div>
+        <pre id="code-example"><code><span class="kw">fn</span> <span class="fn">sum_between</span>(xs: <span class="ty">List</span>&lt;<span class="ty">int</span>&gt;, lo: <span class="ty">int</span>, hi: <span class="ty">int</span>) -&gt; <span class="ty">int</span>
+  <span class="contract">requires</span> <span class="n">0</span> &lt;= lo <span class="kw">and</span> lo &lt;= hi <span class="kw">and</span> hi &lt;= len(xs)
+  <span class="contract">requires</span> <span class="kw">forall</span> i <span class="kw">in</span> range(<span class="n">0</span>, len(xs)) :: xs[i] &gt;= <span class="n">0</span>
+  <span class="contract">ensures</span> result &gt;= <span class="n">0</span>
+{
+    <span class="kw">var</span> acc: <span class="ty">int</span> = <span class="n">0</span>;
+    <span class="kw">for</span> i <span class="kw">in</span> range(lo, hi)
+      <span class="contract">invariant</span> acc &gt;= <span class="n">0</span>
+    {
+        acc += xs[i];
+    }
+    <span class="kw">return</span> acc;
+}</code></pre>
+      </div>
+
+      <div class="lang-points reveal">
+        <div class="point">
+          <span class="point-ico">📝</span>
+          <div>
+            <h3>Contracts, not comments</h3>
+            <p><code>requires</code> / <code>ensures</code> become real type-level predicates the checker must prove — familiar to anyone who's seen design-by-contract.</p>
+          </div>
+        </div>
+        <div class="point">
+          <span class="point-ico">🔀</span>
+          <div>
+            <h3>Deterministic elaboration</h3>
+            <p>Surface → strict core is a conventional compiler pass, not AI. Auditable, reproducible, and hard-error on anything ambiguous.</p>
+          </div>
+        </div>
+        <div class="point">
+          <span class="point-ico">🔁</span>
+          <div>
+            <h3>Checker-guided repair loop</h3>
+            <p>Structured <code>(location, obligation, counterexample)</code> errors are translated back into surface terms — the model repairs in the language it's fluent in.</p>
+          </div>
+        </div>
+        <div class="point">
+          <span class="point-ico">🛡️</span>
+          <div>
+            <h3>Trusted FFI boundary</h3>
+            <p><code>extern fn</code> + mandatory <code>trust:</code> annotations. The toolchain <em>generates</em> a runtime contract-check wrapper around every unverified-library call.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ TIERS ═══════════ -->
+<section class="section section-alt" id="tiers">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">§ Tiered verification</span>
+      <h2>Full proof where it matters.<br>Honest testing everywhere else.</h2>
+      <p>
+        Full-stack apps are mostly not algorithmically interesting. Ward pays the expensive proof cost
+        only where the resource-type system says it's mandatory — and lets the rest fall back gracefully.
+      </p>
+    </div>
+
+    <div class="tier-grid">
+      <div class="tier tier-tested reveal">
+        <div class="tier-head">
+          <span class="tier-tag">Tier 1</span>
+          <h3>Tested</h3>
+        </div>
+        <p>Property-based tests generated from the type signature. No proof.</p>
+        <ul>
+          <li>UI glue, formatting</li>
+          <li>Simple CRUD handlers</li>
+          <li>Verify: ~0.0 s (smoke ex.)</li>
+        </ul>
+      </div>
+      <div class="tier tier-contracted reveal">
+        <div class="tier-head">
+          <span class="tier-tag">Tier 2</span>
+          <h3>Contracted</h3>
+        </div>
+        <p><code>requires</code> / <code>ensures</code> checked; proof search is bounded, with a test-based fallback instead of a hard failure.</p>
+        <ul>
+          <li>Business logic</li>
+          <li>Validation, most backends</li>
+          <li>Verify: ~1.3 s (smoke ex.)</li>
+        </ul>
+      </div>
+      <div class="tier tier-proven reveal">
+        <div class="tier-head">
+          <span class="tier-tag">Tier 3</span>
+          <h3>Proven</h3>
+        </div>
+        <p>Full SMT/proof-search verification. No timeout fallback. Required for anything touching linear-typed resources.</p>
+        <ul>
+          <li>Auth, payments</li>
+          <li>Data-integrity paths</li>
+          <li>Verify: ~1.4 s (smoke ex.)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ ARCHITECTURE ═══════════ -->
+<section class="section" id="architecture">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">§ Architecture</span>
+      <h2>One pipeline, three honest layers.</h2>
+    </div>
+
+    <div class="pipeline reveal">
+      <div class="pipe-node">
+        <span class="pipe-ico">✍️</span>
+        <h3>Surface · ward0</h3>
+        <p>The model writes Python/TS-shaped code with contracts.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <span class="pipe-ico">⚙️</span>
+        <h3>Elaboration</h3>
+        <p>Deterministic compiler pass to a strict, typed core.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <span class="pipe-ico">🧮</span>
+        <h3>Verifier</h3>
+        <p>Dafny 4.11 + Z3 4.12. Accept / reject with structured errors.</p>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <span class="pipe-ico">🚀</span>
+        <h3>Multi-target</h3>
+        <p>Compile to existing ecosystems — never a parallel universe.</p>
+      </div>
+    </div>
+
+    <div class="arch-note reveal">
+      <span class="note-ico">🔬</span>
+      <p><strong>Design honesty:</strong> the core calculus, effect tracking, linear types, and content-addressed library are specified in the <a href="https://github.com/PersistenceOS/WARD/blob/main/files/ward-language-design.md" target="_blank" rel="noopener">design doc</a>. What's <em>built and measured</em> today is the ward0 → Dafny toolchain below.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ RESULTS ═══════════ -->
+<section class="section section-alt" id="results">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">§ Experiments</span>
+      <h2>Pre-registered. Measured. Honestly reported.</h2>
+      <p>
+        Ward is a research project with real negative results on the record — and a validated core
+        thesis. Two phases, one model (<code>opencode/deepseek-v4-flash-free</code>).
+      </p>
+    </div>
+
+    <div class="results-grid">
+      <div class="result-card reveal">
+        <h3>Phase 0 · 62 tasks</h3>
+        <table class="result-table">
+          <thead>
+            <tr><th>Claim</th><th>Result</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A · surface beats raw Dafny</td>
+              <td>pass@1 tied 54/62 · p = 1.0000</td>
+              <td class="cell-fail">✕ null</td>
+            </tr>
+            <tr>
+              <td>B · contract-stub boundary</td>
+              <td>75% fewer violation escapes</td>
+              <td class="cell-pass">✓</td>
+            </tr>
+            <tr>
+              <td>Pivot · generated enforcement</td>
+              <td>8/8 leaks → 0/8</td>
+              <td class="cell-pass">✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="result-card reveal">
+        <h3>Phase 1 · 4 arms, 8 modules</h3>
+        <table class="result-table">
+          <thead>
+            <tr><th>Arm</th><th>Solved</th><th>Leaks</th><th>Verify</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>W</strong> full stack</td><td><strong>8/8</strong></td><td><strong>0/20</strong></td><td>12.3 s</td></tr>
+            <tr><td>D · raw Dafny</td><td>6/8</td><td>4/20</td><td>16.0 s</td></tr>
+            <tr><td>W − enforce</td><td>7/8</td><td>1/20</td><td>14.2 s</td></tr>
+            <tr><td>W − tiers</td><td>3/3*</td><td>0/8</td><td>—</td></tr>
+          </tbody>
+        </table>
+        <p class="table-note">*arm halted by an endpoint hang, not a correctness failure</p>
+      </div>
+    </div>
+
+    <p class="table-note reveal">Verify timings are Phase-1 smoke-test examples (w6/w3/w1), not full-arm medians (~1.6 s).</p>
+
+    <div class="verdict reveal">
+      <div class="verdict-badge">Conditional GO</div>
+      <p>
+        C1 tiers ✅ · C2 boundary at scale (0/20) ✅ · C3a accuracy ✅ (8/8 vs 6/8) · C3b effort ratio
+        0.77 vs 0.7× ❌ — the effort advantage didn't reach the pre-registered bar. <strong>The
+        surface-syntax claim is dropped; the boundary + tiered-verification thesis carries.</strong>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark">🛡️</span> WARD
+      <p>Write. And Reason. Deductively.</p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/PersistenceOS/WARD" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/PersistenceOS/WARD/blob/main/files/ward-language-design.md" target="_blank" rel="noopener">Design doc</a>
+      <a href="https://github.com/PersistenceOS/WARD/blob/main/files/PHASE1_REPORT.md" target="_blank" rel="noopener">Phase 1 report</a>
+    </div>
+    <div class="footer-legal">
+      Apache-2.0 · PersistenceOS · 2026
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+fn last_digit(n: int) -> int
+  requires n >= 0
+  ensures result >= 0 and result < 10
+{
+    return n % 10;
+}

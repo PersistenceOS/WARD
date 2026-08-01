@@ -1,0 +1,12 @@
+fn sum_range(lo: int, hi: int) -> int
+  requires lo >= 0 and lo <= hi
+  ensures result >= 0
+{
+    var acc: int = 0;
+    for i in range(0, hi - lo + 1)
+      invariant acc >= 0
+    {
+        acc += lo + i;
+    }
+    return acc;
+}

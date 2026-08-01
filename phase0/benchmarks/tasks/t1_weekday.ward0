@@ -1,0 +1,24 @@
+fn weekday(d: int) -> str
+  requires d >= 1 and d <= 7
+  ensures result == "Mon" or result == "Tue" or result == "Wed" or result == "Thu" or result == "Fri" or result == "Sat" or result == "Sun"
+{
+    if d == 1 {
+        return "Mon";
+    }
+    if d == 2 {
+        return "Tue";
+    }
+    if d == 3 {
+        return "Wed";
+    }
+    if d == 4 {
+        return "Thu";
+    }
+    if d == 5 {
+        return "Fri";
+    }
+    if d == 6 {
+        return "Sat";
+    }
+    return "Sun";
+}

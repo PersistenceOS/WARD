@@ -1,0 +1,13 @@
+{
+  "id": "t3_max_adjacent_sum",
+  "tier": 3,
+  "holdout": false,
+  "spec": "Return the maximum of xs[i] + xs[i+1] over all adjacent pairs. Callers guarantee len(xs) >= 2.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3]], "out": 5},
+    {"in": [[1, 2, 3, 4]], "out": 7},
+    {"in": [[5, 5]], "out": 10},
+    {"in": [[-1, -2, -3]], "out": -3},
+    {"in": [[10, 1, 10]], "out": 11}
+  ]
+}

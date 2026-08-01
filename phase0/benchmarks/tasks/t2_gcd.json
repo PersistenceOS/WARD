@@ -1,0 +1,14 @@
+{
+  "id": "t2_gcd",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return the greatest common divisor of a and b using the subtraction-based Euclidean algorithm. Callers guarantee a > 0 and b > 0.",
+  "hidden_tests": [
+    {"in": [12, 18], "out": 6},
+    {"in": [17, 19], "out": 1},
+    {"in": [100, 25], "out": 25},
+    {"in": [7, 7], "out": 7},
+    {"in": [270, 192], "out": 6},
+    {"in": [1, 1], "out": 1}
+  ]
+}

@@ -1,0 +1,14 @@
+fn first_even_index(xs: List<int>) -> int
+  ensures result >= -1 and result < len(xs)
+  ensures result == -1 or xs[result] % 2 == 0
+  ensures result != -1 or not (exists i in range(0, len(xs)) :: xs[i] % 2 == 0)
+{
+    for i in range(0, len(xs))
+      invariant forall j in range(0, i) :: xs[j] % 2 != 0
+    {
+        if xs[i] % 2 == 0 {
+            return i;
+        }
+    }
+    return -1;
+}

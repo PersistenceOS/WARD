@@ -1,0 +1,20 @@
+fn count_primes_up_to(n: int) -> int
+  requires n >= 2 and n <= 100
+  ensures result >= 0
+{
+    var cnt: int = 0;
+    for i in range(2, n + 1)
+      invariant cnt >= 0
+    {
+        var prime: bool = true;
+        for d in range(2, i) {
+            if i % d == 0 {
+                prime = false;
+            }
+        }
+        if prime {
+            cnt += 1;
+        }
+    }
+    return cnt;
+}

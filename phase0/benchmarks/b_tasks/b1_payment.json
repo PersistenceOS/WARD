@@ -1,0 +1,23 @@
+{
+  "id": "b1_payment",
+  "buggy": true,
+  "spec": "Implement `pay`: charge a purchase via the payment gateway. The gateway charges purchases up to its internal per-transaction limit and declines larger purchases, responding with Err(\"declined\"). A successful charge is Ok(()).",
+  "fn": "pay",
+  "extern": {
+    "name": "stripe_charge",
+    "params": [["amount", "int"], ["token", "str"]],
+    "ret": "Result<Unit, str>",
+    "contract": "requires amount > 0\nensures is_ok(result) == (amount <= 100)",
+    "impl": "def stripe_charge_stub(amount, token):\n    if amount <= 120:\n        return (\"ok\", None)\n    return (\"err\", \"declined\")\n",
+    "contract_py": "lambda amount, token, out: (out[0] == 'ok') == (amount <= 100)"
+  },
+  "hidden_tests": [
+    {"in": [50, "tok_ok"], "out": {"ok": null}},
+    {"in": [100, "tok_ok"], "out": {"ok": null}},
+    {"in": [110, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [115, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [120, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [150, "tok_ok"], "out": {"err": "declined"}},
+    {"in": [1000, "tok_ok"], "out": {"err": "declined"}}
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "id": "w6_crud_handler",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "crud_op",
+  "tiers": {
+    "crud_op": "Tested"
+  },
+  "spec": "Implement `crud_op`: handle a CRUD operation on the data store. op 1 reads the value at key (the store returns Ok(key * 10) for known keys and Err(\"not found\") otherwise); op 2 writes value at key, returning Ok(0) on success and Err(\"storage full\") otherwise. Known keys are those with id below 1000. Any other op is rejected with Err(\"bad op\"). The caller must detect when the store's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "db_get",
+      "params": [["key", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires key > 0\nensures is_ok(result) == (key < 1000)",
+      "impl": "def db_get_stub(key):\n    if key < 1100:\n        return (\"ok\", key * 10)\n    return (\"err\", \"not found\")\n",
+      "contract_py": "lambda key, out: (out[0] == 'ok') == (key < 1000)",
+      "violation_probes": [
+        {"in": [500], "violation": false},
+        {"in": [1050], "violation": true},
+        {"in": [1200], "violation": false}
+      ]
+    },
+    {
+      "name": "db_put",
+      "params": [["key", "int"], ["value", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires key > 0\nensures is_ok(result) == (key < 1000)",
+      "impl": "def db_put_stub(key, value):\n    if key < 1050:\n        return (\"ok\", None)\n    return (\"err\", \"storage full\")\n",
+      "contract_py": "lambda key, value, out: (out[0] == 'ok') == (key < 1000)",
+      "violation_probes": [
+        {"in": [500, 42], "violation": false},
+        {"in": [1020, 42], "violation": true},
+        {"in": [1100, 42], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} db_get(key: int) returns (result: Result<int, string>)\n  requires key > 0\n  ensures result.Ok? == (key < 1000)\n\nmethod {:extern}{:axiom} db_put(key: int, value: int) returns (result: Result<(), string>)\n  requires key > 0\n  ensures result.Ok? == (key < 1000)",
+  "reference_dafny_caller": "method crud_op(op: int, key: int, value: int) returns (result: Result<int, string>)\n  requires op >= 1\n  requires key > 0\n  ensures result.Ok? == ((op == 1 || op == 2) && key < 1000)\n{\n  if op == 1 {\n    var v := db_get(key);\n    if v.Ok? != (key < 1000) {\n      result := Err(\"contract violation\");\n      return;\n    }\n    if !v.Ok? {\n      result := Err(v.error);\n      return;\n    }\n    result := Ok(v.value);\n    return;\n  }\n  if op == 2 {\n    var u := db_put(key, value);\n    if u.Ok? != (key < 1000) {\n      result := Err(\"contract violation\");\n      return;\n    }\n    if !u.Ok? {\n      result := Err(u.error);\n      return;\n    }\n    result := Ok(0);\n    return;\n  }\n  result := Err(\"bad op\");\n}",
+  "hidden_tests": [
+    {"in": [1, 500, 0], "out": {"ok": 5000}},
+    {"in": [1, 500, 999], "out": {"ok": 5000}},
+    {"in": [2, 500, 42], "out": {"ok": 0}},
+    {"in": [1, 1050, 0], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [1, 1200, 0], "out": {"err": "not found"}},
+    {"in": [2, 1020, 42], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [2, 1100, 42], "out": {"err": "storage full"}},
+    {"in": [3, 500, 0], "out": {"err": "bad op"}}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "t2_is_ascending",
+  "tier": 2,
+  "holdout": false,
+  "spec": "Return true if xs is strictly ascending (xs[i-1] < xs[i] for every adjacent pair), false otherwise. Callers guarantee len(xs) >= 2.",
+  "hidden_tests": [
+    {"in": [[1, 2, 3]], "out": true},
+    {"in": [[1, 2, 2]], "out": false},
+    {"in": [[3, 2, 1]], "out": false},
+    {"in": [[1, 2, 1]], "out": false},
+    {"in": [[1, 3, 5]], "out": true},
+    {"in": [[-3, 0, 2]], "out": true}
+  ]
+}

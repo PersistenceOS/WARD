@@ -1,0 +1,14 @@
+fn list_min(xs: List<int>) -> int
+  requires len(xs) > 0
+  ensures forall j in range(0, len(xs)) :: xs[j] >= result
+{
+    var m: int = xs[0];
+    for i in range(1, len(xs))
+      invariant forall j in range(0, i) :: xs[j] >= m
+    {
+        if xs[i] < m {
+            m = xs[i];
+        }
+    }
+    return m;
+}
