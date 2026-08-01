@@ -19,6 +19,83 @@ Ward is a Python/TypeScript-shaped surface language that **deterministically ela
 
 </div>
 
+## The 60-second version (no jargon)
+
+> **TL;DR:** Ward = write code + write a promise about what the code must do — and the computer *proves* the code keeps the promise, before anything runs.
+
+**The problem:** When an AI writes code — or a human writes code fast — the code can be wrong, even when it runs. "It works" can hide bugs that explode later: money disappears, passwords leak, databases get corrupted.
+
+Most languages check *"does it run?"* WARD also checks *"is it right?"*
+
+**The idea in one sentence:**
+
+> You write code. You also write a promise about what the code must do. The computer **proves** the code keeps its promise — before anything runs.
+
+Think of it like cooking with a math teacher standing over your shoulder. You write "add 2 cups of flour." The teacher doesn't just watch you pour — they *calculate* whether the result will be a cake before you start. If the recipe can't produce what it promised, they stop you.
+
+```ward0
+fn withdraw(balance: int, amount: int) -> int
+  requires amount > 0                // the promise BEFORE: amount must be positive
+  requires amount <= balance         // the promise BEFORE: can't take more than exists
+  ensures result == balance - amount // the promise AFTER: what you get back is exactly right
+{
+    return balance - amount;
+}
+```
+
+WARD reads the three promises and **mathematically proves** the code inside the `{ }` keeps them. Not "probably," not "trust me" — *proven*, the way a math theorem is proven.
+
+**Where it gets clever — three speeds of checking:**
+
+Not everything needs a full math proof — that would be slow and painful. So WARD has three levels:
+
+1. **Tested** — for boring code (webpage buttons, formatting). It runs sample tests automatically. Good enough.
+2. **Contracted** — for normal business logic. It checks the promises, with a time limit.
+3. **Proven** — for code where being wrong is catastrophic (payments, logins, moving money). It proves everything, no shortcuts.
+
+**One more trick — the bouncer:**
+
+Your code calls other people's code (libraries). You can't prove *their* code is right. So WARD puts a bouncer at the door: when the library hands back a result, the bouncer checks it against the promise. If the library lies — returns "success" when it should have said "failed" — the bouncer stops it at the door. A wrong answer literally cannot sneak through labeled "OK."
+
+**What it's designed for:**
+
+WARD is built for a specific world: **AI writing full-stack apps** — websites, backends, payment flows — where a model writes a lot of code fast and nobody has time to hand-check every line. WARD's job is to make "the AI wrote it" and "it's proven correct" both true at once.
+
+**Honest status:** WARD is a research project, not a finished language. Today's prototype (`ward0`) writes code in a Python-like style, translates it to another language ([Dafny](https://github.com/dafny-lang/dafny)) that does the proving, with [Z3](https://github.com/Z3Prover/z3) as the math engine. The end goal is WARD standing on its own — its own core, its own proof engine (see [Where we are vs. where we're going](#where-we-are-vs-where-were-going)). The ideas it tests are already validated by real, pre-registered experiments (see below).
+
+## How WARD works with an AI model (no jargon)
+
+WARD isn't a replacement for the AI — it's the AI's **strictest teacher**. The model still writes the code. WARD's job is to make sure the code actually does what it claims, and to keep guiding the model until it does.
+
+**The loop:**
+
+```
+ model writes code + promises (in WARD's friendly syntax)
+        │
+        ▼
+ WARD checks — proves the promises, mathematically
+        │
+   ┌────┴──────────┐
+   │   passes      │  fails → "line X breaks promise Y in situation Z"
+   └────┬──────────┘          → model fixes it → try again
+        ▼
+        ships
+```
+
+1. **The model writes in a language it's comfortable with.** WARD's surface syntax is Python/TypeScript-shaped, so the model stays in its comfort zone. It writes the code *and* the promises about what the code must do — no math, no proofs, just plain statements like "amount must be positive."
+
+2. **WARD checks the promises the hard way.** The computer doesn't take "trust me." It *proves* the code keeps its promises, the way a math theorem is proven. No proof, no ship.
+
+3. **If the proof fails, WARD says exactly why.** Not "something's wrong somewhere in these 200 lines" — but "this line breaks this promise in this situation." The model fixes it and tries again. This write → check → fix loop is the whole trick: the model converges on correct code because the teacher never blinks.
+
+4. **WARD makes it hard to cheat.** A model could try to satisfy the checker with a promise that's technically true but meaningless. By design, WARD pushes back two ways: an adversarial pass actively tries to break the promise, and test cases are generated mechanically from the contract — so the model can't write tests that quietly agree with its own bugs.
+
+5. **Over time, the model writes less and less.** WARD's design includes a library of already-proven functions. Instead of writing new code from scratch, the model looks up "a proven function that does this" and composes. Every verified function stays verified forever — so the amount of brand-new, unverified code shrinks as the library grows.
+
+**What WARD does *not* do:** it doesn't make the model smarter or faster. It makes the model's mistakes *catchable*. An AI writing verified code is still an AI writing code — WARD is the unforgiving reviewer that catches what "it works" hides.
+
+**What's true today vs. what's the plan:** the current prototype already runs the real write → verify → fix loop (generate → transpile → Dafny verify → hidden tests, with retries — and **0/20 boundary leaks** in the Phase-1 W arm). Today's hidden tests are fixed, written by the experiment designers, not the model. The adversarial critic, the proven-function library, and training models against the checker as a reward signal are the designed next steps (Phase 3+; training against the checker is the Phase-5 bottleneck).
+
 ## What is Ward?
 
 Most AI code is checked by "did it compile" and "do the tests pass." Ward asks for more: **every AI-authored program is a proof obligation where proof is warranted, and a contract-checked, tested obligation everywhere else.**
@@ -151,10 +228,24 @@ Requires [Dafny 4.11.0](https://github.com/dafny-lang/dafny) and [Z3 4.12.1](htt
 - `extern fn` declarations with optional `trust: "..."` annotations; `enforce_boundary=True` auto-generates a runtime contract-check wrapper around every extern call
 - **No** classes, closures, recursion (totality by construction), unbounded loops, or generics beyond `Result` and `List`
 
-## Roadmap
+## Where we are vs. where we're going
 
-- **Phase 2** — core calculus + elaborator scoping ([design doc](files/ward-phase2-scoping.md)), ward-core IR v0.1 done
-- **Phase 3+** — surface/core elaboration, multi-target backends, composition-first verified library (design §6)
+Ward's end-state is a **standalone language** — its own core calculus, its own checker, its own multi-target backends. What's built and measured today is the **ward0 → Dafny prototype**: Dafny + Z3 act as the proving engine, deliberately borrowed so the experiments could test the hypotheses that matter (surface syntax, FFI boundary, tiered verification) without first spending multi-person-years on a from-scratch checker.
+
+| | Today (prototype) | Design (Phase 3+) |
+|---|---|---|
+| **Surface** | `ward0` — Python/TS-shaped, `requires`/`ensures` contracts | Same surface layer |
+| **Core** | transpiled directly to Dafny | ward-core IR — strict typed core calculus (dependent/refinement types, effects, linearity) |
+| **Verifier** | Dafny 4.11 + Z3 4.12 | Own SMT-backed checker (design §8, à la Liquid Haskell / F*) |
+| **Backends** | — | Multi-target: JS/TS, Go, Python, JVM, WASM/native (design §4d) |
+
+### Roadmap
+
+- **Phase 0–1 — done.** `ward0` grammar v0.1 (lark PEG), `ward0 → Dafny` transpiler, evaluation harness, 62-task benchmark + 8 w-tasks + 6 B-scenarios; boundary + tiered-verification thesis validated (see [reports](files/)).
+- **Phase 2 — scoped.** Core calculus + elaborator scoping ([design doc §8](files/ward-phase2-scoping.md)): ward-core IR v0.1 (`Tier`/`EffectKind` enums) complete; next: formalize the type/effect/linearity system.
+- **Phase 3+ — next.** Standalone SMT-backed checker, full surface/core elaboration implementation, multi-target backends, composition-first verified library (design §6).
+
+Dafny remains the benchmark Ward is measured against — not the destination. The design's position is explicit: Ward should *match* Dafny on core verification mechanics and differentiate on full-stack concerns (tiered verification §4c, trusted FFI boundary §4e, effect model §4f).
 
 ## License
 
