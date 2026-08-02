@@ -188,6 +188,8 @@ C1 tiers ✅ · C2 boundary at scale (0/20) ✅ · C3a accuracy ✅ (8/8 vs 6/8)
 | **Dependency pinning** | version drift / unresolved / ambiguous deps are hard errors | core pass (E4b) |
 | **Linearity** | money/tokens consumed exactly once on every path — copy/drop/double-use fail | core pass (T7) |
 | **Structured repair errors** | verifier output → `(location, obligation, counterexample)` triples in ward0 terms, with the τ advisory attached | `wardcore/error_translation.py` |
+| **Z3-direct backend (E10, pre-registered)** | verifies ward-core IR directly with Z3 — no Dafny in the loop; externs as axiom methods, path-walk VC construction, per-fn effort records | `wardcore/z3_backend.py` (14 unit tests green) |
+| **Certificate re-derivation (Phase 3)** | the standalone checker re-transpiles the bound source itself and compares hashes — the Level-1 "declared, not re-derived" gap is closed | `harness/cert_rederive.py` (stdlib-only, probed 5/5) |
 
 ---
 
@@ -197,9 +199,10 @@ C1 tiers ✅ · C2 boundary at scale (0/20) ✅ · C3a accuracy ✅ (8/8 vs 6/8)
 |---|---|---|
 | 0–1 | ✅ done | `ward0` grammar, transpiler, harness; thesis validated (boundary + tiers) |
 | 2 | 🔬 scoped | core calculus + elaborator ([scoping doc](files/ward-phase2-scoping.md)); ward-core IR v0.1 complete; τ + Boundary Immunity instruments built |
-| 3+ | 🧭 next | standalone SMT-backed checker (Ward standing alone, no Dafny), multi-target backends, composition-first verified library ([design §6](files/ward-language-design.md)) |
+| 3 | ✅ first slice built | **standalone SMT-backed checker — Ward standing alone, no Dafny**: `z3_backend` verifies ward-core IR directly with Z3 (14 unit tests green; E10 pre-registered); `cert_rederive` closes the certificate's Level-1 gap (stdlib-only re-transpiler, probed 5/5) |
+| 4 | 🧭 next | multi-target backends, composition-first verified library ([design §6](files/ward-language-design.md)) |
 
-**Prototype vs. design.** What is built and measured today is the `ward0` → Dafny prototype; Dafny + Z3 are the borrowed proving engine. The end state is Ward standing alone — its own core calculus, checker, and backends.
+**Prototype vs. design.** The measured pipeline is still `ward0` → Dafny; Dafny + Z3 are the borrowed proving engine. But Ward's own checker is no longer hypothetical: `z3_backend` verifies the core IR directly with Z3 — no Dafny in the loop — and certificates can now be independently re-derived with stdlib only. Multi-target backends and the composition-first verified library remain the open end of the roadmap.
 
 ---
 

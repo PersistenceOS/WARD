@@ -73,8 +73,10 @@ fn withdraw(balance: int, amount: int) -> int
 - Surface-syntax superiority over raw Dafny was **falsified** (Phase 0,
   p = 1.0000). WARD's measured wins: boundary enforcement (0/20 leaks vs
   4/20), tiered proof cost, and checker-guided convergence.
-- Research prototype: `ward0` → Dafny + Z3 today; standalone checker +
-  own core calculus are phases 3+.
+- Research prototype: `ward0` → Dafny + Z3 is the measured pipeline; the
+  standalone SMT checker's first slice (`z3_backend`, Z3-direct, no Dafny)
+  is built; multi-target backends + the composition-first library remain
+  phases 3+.
 
 ## Where everything is
 

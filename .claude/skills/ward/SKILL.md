@@ -97,8 +97,10 @@ tier means anything.
 - The surface-syntax-superiority claim was **falsified** (Phase 0, p = 1.0000).
   WARD wins on boundary enforcement, tiered proof cost, and checker-guided
   convergence — never on "syntax makes the model write better."
-- It's a research prototype: `ward0` → Dafny + Z3 today; the standalone
-  checker and its own core calculus are the roadmap (phases 3+).
+- Research prototype: `ward0` → Dafny + Z3 is the measured pipeline; the
+  standalone SMT checker's first slice (`z3_backend`, Z3-direct, no Dafny)
+  is built; multi-target backends + the composition-first library remain
+  phases 3+.
 
 ## Experimental features you can use today
 
