@@ -96,6 +96,34 @@ Ward does *not* compete with Dafny or Lean 4 on verification mechanics — it di
 3. **Model repairs** against the error and retries — checker-guided convergence.
 4. **Hard to game (design):** an adversarial pass tries to break the promise; tests are generated mechanically from the contract, so the model cannot write tests that agree with its own bugs.
 
+## Formal foundations
+
+Ward is not a new proof theory — it implements a 50-year-old one, and that's the point. Every ward0 function is literally a **Hoare triple** (Hoare, 1969):
+
+$$\{P\}\; c\; \{Q\}$$
+
+`requires` is the precondition $P$, the body is the program $c$, `ensures` is the postcondition $Q$.
+
+**Total correctness.** "Proved" means the triple holds *and* the program terminates — free by construction, since ward0 has bounded loops only and no recursion:
+
+$$\vdash \{P\}\; c\; \{Q\} \;\Longleftrightarrow\; \forall \sigma.\; \sigma \models P \;\Rightarrow\; [\![c]\!](\sigma)\!\downarrow \wedge [\![c]\!](\sigma) \models Q$$
+
+**What the solver checks.** Dafny emits a verification condition and Z3 proves validity by showing the negation is unsatisfiable:
+
+$$\text{unsat}\Big(\neg\big(P(\vec{x}) \wedge [\![c]\!](\vec{x}) = \vec{x}' \Rightarrow Q(\vec{x}')\big)\Big)$$
+
+**The repair loop.** The model emits candidates $c_1, c_2, \ldots$ until one satisfies the contract — the verifier, not the human, is the acceptance predicate:
+
+$$c^{*} = \min_{n \geq 1}\{\, n : \vdash \{P\}\; c_n\; \{Q\} \,\}$$
+
+**Boundary enforcement.** Every `extern fn` gets a generated runtime wrapper that converts a contract violation into `Err("contract violation")` — the measured 0/20-leak mechanism:
+
+$$W(x) = \begin{cases} s(x) & \text{if } s(x) \models \text{contract}_s \\[2pt] \text{Err}(\text{"contract violation"}) & \text{otherwise} \end{cases}$$
+
+**Token economics (measured).** Guide tokens $G$ re-sent on each of $A$ attempts, plus generated output — the numbers behind the Phase-1 table:
+
+$$T_{\text{arm}} = G \cdot A + \tfrac{1}{4}\textstyle\sum_i |c_i|, \qquad \frac{T_{\text{arm}}}{K_{\text{solved}}}$$
+
 ## Results
 
 Ward is a research project: pre-registered hypotheses, pre-registered gates, and negative results published alongside positive ones.
