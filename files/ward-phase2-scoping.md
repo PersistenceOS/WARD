@@ -253,8 +253,228 @@ green (101 + 17), transpiler 24/24, harness 20/20, grammar 20/20, wallclock
 7/7; E1 gate **73/73 plain + 73/73 enforce** byte-identical (62 + w1-w10 +
 w12 parity; w11 Tested-bearing → E5-real); E3/E4/E4b/E5 all re-green;
 fake-model harness W-arm smoke on the 4 new tasks 4/4 solved, 0/8 boundary
-leaks, 0 fallbacks. **Next: week 6 (linearity T7/E6) or the first real-model
-E5-real run (gates E4b/E5-real on real-model runs) per the week-8 timeline.**
+leaks, 0 fallbacks.
+**Week-6 (linearity T7/E6) status: COMPLETE (2026-08-01).** New
+`phase0/wardcore/linearity_pass.py` — T7 as a core pass, pre-registered
+scope (design doc §4, §5 resp. 4; scoping §3.1): a `linear`-typed value
+(money/token/capability) is consumed EXACTLY ONCE on every path; linearity is
+INFERRED by the elaborator, never model-annotated (the model's own params are
+never tagged). The only capability boundary in v0.1 is the extern: `linear:
+name` on an extern def (toolchain annotation, same family as `effect:`/`dep:`/
+`trust:`) marks that extern parameter as the capability; `LinearPass.infer`
+computes per-fn linear param NAMES by a module-level fixpoint over calls +
+moves (a param is linear iff it can reach a linear consuming position —
+directly, transitively through fn calls with linear params, or through local
+moves), and `validate` enforces consume-exactly-once path-sensitively with
+possible-count states ({0} alive / {1} consumed / {0,1} across paths):
+consuming positions are ONLY bare args to linear callee params, moves into
+locals, and returns; every OTHER mention (condition, arithmetic, comparison,
+indexing, non-linear call arg) is a COPY -> hard error; double-use, drop, and
+loop-use (consumption count across iterations not trackable in v0.1) are hard
+errors; a non-linear expr at a linear param (minting) is a hard error — fired
+even in fns with no inferred linear param, since the extern capability is the
+boundary. Wired into the elaborator (`_LINEAR_RE` positional attachment to
+extern defs, pass in transpile/elaborate, exposes `linearity_inferred`;
+`_LINEAR_RE` also added to the Phase-0/1 transpiler's `_strip_annotations` —
+a no-op on the E1 corpus). **E6 gate PASS** (`python -m wardcore.e6_gate`,
+9/9 probes): A copy-in-condition, B copy-to-nonlinear-param, C drop,
+D double-use, E linear-inside-loop, F minting all hard-error; G the
+money-transfer oracle (ledger_debit extern with `linear: amount`, transfer
+consuming it exactly once on every path) elaborates, its emitted Dafny
+verifies clean, and hidden tests pass with 0 boundary_okleak under enforce-on;
+H inference-only control (no linear extern = unconstrained) clean; I
+path-split drop enforced. Two real pass bugs surfaced and fixed during
+validation (both caught by the unit suite + gate before any model ran): the
+`_walk_if` merge produced [] when one branch always returned (cross-product
+with an empty list silently dropped the other branch's fall-through path —
+missing double-use and path-split drop), and `validate` skipped fns with no
+inferred linear params (so minting/copy-at-call-site were never checked where
+the value doesn't reach the extern). New `test_linearity.py` 20 tests (no
+Dafny): annotation attachment (positional, not declaration-order; unknown
+param / before-any-extern hard errors), inference (direct, transitive through
+fn calls, through local moves), consume-exactly-once (copy/drop/double-use/
+loop/minting/path-split fail; money-transfer and consume-in-both-branches
+clean), inference-only boundary, full-pipeline raise + exposed map. Validation:
+wardcore **138** tests green (118 + 20), E1 gate **73/73 plain + 73/73
+enforce** byte-identical (pass is a no-op with no `linear:` capability),
+E3/E4/E4b/E5/E5-real all re-green.
+**Week-7 (error translation R8/E8) status: COMPLETE (2026-08-01).** New
+`phase0/wardcore/error_translation.py` — R8 as a core module, pre-registered
+scope (design doc §7; scoping §2 R8, §6 E8): the elaborator's error surface
+keeps the Phase-0/1 status taxonomy and adds the §7 structured-error form,
+`(location, violated_obligation, counterexample)` triples translated back
+into **surface terms** for the repair loop — the Phase-1 harness showed raw
+Dafny errors; Phase 2 translates. The translator parses real Dafny 4.11
+output (`parse_dafny_output`: `path(line,col): Error|Related location:`
+lines, plus `Related counterexample:` model values as `assume v == name;`),
+maps messages to canonical kinds (postcondition / precondition / assertion /
+termination / parse / other), and builds an `EmittedLineMap` by scanning the
+EMITTED Dafny text (what Dafny actually verified — fn/extern/wrapper
+attribution, requires/ensures clause + index; `_checked` wrappers map back to
+the extern's ward0 name) so `translate_errors` renders each triple with the
+ward0 fn name and the actual ward0 clause text (e.g. `transfer:ensures` and
+`postcondition of transfer — ensures is_ok(result) == (amount <= 1000000)`),
+preferring the Dafny `Related location:` line for clause lookup; a runner
+wall-clock timeout string becomes a timeout triple; `render_expr` renders IR
+contracts back to ward0 surface terms. Wired into the elaborator as
+`Elaborator.diagnose(detail, emitted=None)` (defaults to the last emission;
+NO emit internals changed — the line map scans the emitted text, so E1
+byte-parity is untouched), and `harness/dafny_runner.py` `verify_dafny`
+gained `extract_counterexample=False` (`--extract-counterexample` for the
+triple's model values; off by default so no other gate's timing changes).
+**E8 gate PASS** (`python -m wardcore.e8_gate`, 6/6 probes): A broken
+postcondition -> kind=postcondition, loc=transfer:ensures, live counterexample
+{amount: 1000001}; B precondition-at-call-site -> loc=ledger_debit:requires;
+C parse -> kind=parse; D timeout -> timeout triple; E round-trip legibility
+(location.surface is ward0 terms, never a `task.dfy` line; violated_obligation
+carries the real clause text); F the pre-registered repair probe,
+deterministic — a repair keyed ONLY on the triple fixes the exact clause and
+the fixed module verifies (1/1 vs 0/1 blind-retry baseline). Three bugs
+found+fixed during validation: the line map's body-opening `{` inherited the
+previous ensures clause (fixed with a body reset), and two unit-test
+line-selection bugs (the emitter renders `is_ok(result)` as `result.Ok?` so
+`ensures is_ok` never matches; a stripped-vs-unstripped comparison). New
+`test_error_translation.py` 16 tests (no Dafny): parsing the real captured
+4.11 output shapes (postcondition/precondition/assertion/parse/counterexample
+block), classification, line-map attribution incl. wrapper->extern mapping,
+clause rendering, timeout, and the full surface round-trip. Validation:
+wardcore **167** tests green (138 + 16 + 13), E1 gate **73/73 plain + 73/73
+enforce** byte-identical (emit text untouched), E3/E4/E4b/E5/E5-real/E6 all
+re-green. **Next: the consolidated real-model week-8 run (E7 W-vs-D) + the
+Phase-2.5 E9 certificate preview per the week-8 timeline.**
+**Phase-2.5 E9 (certificate preview) status: COMPLETE (2026-08-01).** Built
+per `../files/ward-certified-code.md` (Phase-A emitter + Phase-C standalone
+checker; the pre-registered four gates G1–G4). New `phase0/harness/
+certificate.py` (emitter + probe) and `phase0/harness/cert_check.py` (the
+dependency-free validator — stdlib only: argparse/hashlib/json/re/sys/pathlib;
+no dafny/lark/transpiler/wardcore imports, proven by a fresh-interpreter test).
+The `.proof` artifact (format `ward-cert/v0.1`) binds the composed ward0
+source (`source_sha256`) and the emitted Dafny (`emitted_dafny_sha256` —
+declared, not re-derived, per the Level-1 honesty rule; sound only because E1
+proves **byte-identical** emission), per-function `tier` + `proof` outcome +
+`verify_s` (T6 honored: Tested entries carry `proof: "tested"`, no
+obligation, excluded from the VALID requirement) + advisory I1 `tau`
+(Specification Tightness recorded, never enforced), the `trust_boundary`
+manifest (extern + trust string + monitor flag, cross-checked against
+`toolchain.enforce_boundary`), a toolchain block with **detected** dafny/z3
+versions (probed via `--version`, fallback defaults — no hardcoded drift), and
+a `verdict` recomputed from the function entries. The checker's checks
+(Level-1): structure, source rebinding, tier rules, trust manifest vs source
+externs, verdict consistency — and `validate` **never raises** (malformed-but-
+parseable JSON reports INVALID cleanly, exit 1, no traceback). **Gates:** G1
+(cost) probe on the 5-task mixed-tier set (w1/w4/w5/w7 Proven + w6 Tested):
+marginal emission cost **0.02–0.05%** of verify time vs the ≤ 5% gate — orders
+of magnitude under. G2 (fidelity): all 5 committed artifacts validate, verdict
+agrees with the harness's measured verdicts (0 false VALID, 0 false INVALID).
+G3 (tamper-evidence): source, trust string, verdict, proof outcome, manifest,
+format, and malformed-type tampering all invalidate (exit 1), unit + CLI
+verified. G4 (no-Dafny): checker is stdlib-only; the `Tested` tier needs no
+verifier at all. Test suite `harness/test_cert_check.py` **16 tests**; full
+regression: wardcore suite green, transpiler/harness/grammar green, E1 gate
+**73/73 plain + 73/73 enforce** byte-identical (emission untouched), E3/E4/
+E4b/E5/E5-real/E6/E8 all re-green. Artifacts in
+`phase0/experiments/runs/cert_probe/*.proof`. **Next: the consolidated
+real-model week-8 run (E7 W-vs-D).**
+**Phase-3 (standalone re-deriver, Level-2 checking) status: COMPLETE + PROBED
+FEASIBLE (2026-08-01).** Closes the one declared Level-1 honesty gap —
+`emitted_dafny_sha256` was *declared, not independently re-derived*. New
+`phase0/harness/cert_rederive.py`: a **stdlib-only** re-implementation of the
+ward0→Dafny emission (hand-rolled lexer + recursive-descent parser + emit logic
+ported verbatim from `transpiler/transpiler.py`; no Dafny/Z3/lark/transpiler/
+wardcore — G4 preserved by construction + fresh-interpreter test).
+`cert_check.py` gained `validate_level2(proof, source)` + CLI `--re-derive`
+(re-transpiles the bound source honoring `toolchain.enforce_boundary`, compares
+the re-derived hash to the recorded `emitted_dafny_sha256`, named violation on
+mismatch/re-transpile failure, never raises; Level-1 unchanged, flag off by
+default). **Probe results:** byte-identity vs `Ward0Transpiler` **98/98**
+(task×enforce) across the full composed corpus (w1–w12 + t2/t3); **5/5**
+committed `cert_probe` artifacts re-derive their recorded hash
+(`python -m harness.cert_rederive --probe`). New G5 gate (pre-registered in
+`ward-certified-code.md` §10): all committed artifacts re-derive in stdlib-only
+code + source/emitted-hash tampering invalidates under `--re-derive` while
+Level-1 behavior is unchanged — **PASS (5/5)**. Tests:
+`harness/test_cert_check.py` **25/25** (Level-2 fidelity, byte-identity,
+tamper, never-raises, CLI exit codes, --source required). Full regression green:
+wardcore suite, transpiler/harness/grammar, gates E1 (73/73 + 73/73) / E3 / E4 /
+E4b / E5 / E5-real / E6 / E8. Honest boundary: the re-transpiler's soundness is
+scoped to the E1-validated corpus (global vs contextual keyword lexing,
+corpus-invisible, re-checked by tests). **Next: the consolidated real-model
+week-8 run (E7 W-vs-D).**
+**E10 (Z3-direct standalone checker) status: COMPLETE + GATE PASS (2026-08-02).**
+First slice of the README's '3+' roadmap row (**standalone SMT-backed checker —
+Ward standing alone, no Dafny**). New `phase0/wardcore/z3_backend.py`:
+`Z3ModuleVerifier` verifies the elaborated ward-core IR Module DIRECTLY against
+Z3 — no Dafny, no `dafny` CLI, no harness, no model in the check leg. Types map
+1:1 onto z3 sorts (int/bool/str, Unit + Result<T,E> as cached datatypes,
+List<T> as seqs); externs are axiom methods exactly like Dafny's
+`{:extern}{:axiom}` (call site proves requires — a VC obligation — and assumes
+ensures); path-walk symbolic execution emits `pc => ensures[result := v]` per
+return and `pc => requires(args)` per extern call; loops use the
+base/inductive/exit invariant rule (body-assigned vars are HAVOCED to fresh
+consts both in the inductive premise and at exit — the vacuous-verification
+trap where a stale pre-loop value proves the postcondition is closed, verified
+by review); constant-bound loops without invariants unroll (cap 100);
+symbolic-bound loops without invariants report honest `not_proved`, never a
+silent pass. Effort metered per function in the R7 EffortRecord schema
+(Tested -> not_run, 0.0 s — T6). **E10 gate (legs A–D all PASS):** leg A —
+w1–w8 (Proven ×6, Contracted ×1, Tested ×1) all verify Z3-direct with **0
+dafny invocations** in the check leg; leg B — buggy-caller-ignores-extern-Err
+and overclaimed-contract probes both FAIL with rendered counterexamples naming
+the violating inputs (amount > 100 / > 50); leg C — per-fn solver seconds
+metered, Tested never run; leg D — Z3 verdict agrees with `dafny verify` on
+the same emitted sources 8/8 (parity leg is the only dafny user). Unit tests
+`wardcore/test_z3_backend.py` **14/14**; full regression green: wardcore suite,
+transpiler/harness/grammar, gates E1 (73/73 + 73/73) / E3 / E4 / E4b / E5 /
+E5-real / E6 / E8. Leg E (informational extension table): the 22-task t2/t3
+corpus (loops + invariants, quantifiers, List<int>) runs through the backend —
+11 verified, honest not_proved reported, no silent pass. Evidence:
+`experiments/runs/e10_gate.jsonl`. Multi-target backends + the composition-
+first verified library remain the open end of the roadmap (the '3+' row's
+remaining two components).
+**E11 (Python backend — first multi-target slice) status: COMPLETE + GATE PASS
+(2026-08-02).** First slice of the README's '4' roadmap row (**multi-target
+backends**). New `phase0/wardcore/py_backend.py`: `PyEmitter` compiles the
+elaborated ward-core IR Module to **Python** — the simplest real host runtime
+(design §4d, mirroring Dafny's own multi-target compiler; stdlib-only, no
+lark/dafny/z3). Type mapping: int/bool/str native, Unit -> None, `Result<T,E>`
+-> an emitted `Result` class with `Ok`/`Err` ctors + `__eq__`, `List<T>` ->
+Python list. Externs compile to a `<name>_stub` (the task descriptor's `impl`)
+plus a `<name>` wrapper that converts the stub's `("ok", v)`/`("err", s)`
+tuple to a Result and — enforce on — evaluates the extern's ward0 `ensures`
+against the converted Result, returning `Err("contract violation")` on
+contradiction (the Dafny `_checked` wrapper, recompiled); enforce off = plain
+pass-through (the no-enforce arm). Functions: `requires` -> runtime `assert`
+for Proven/Contracted only (T6: verified code ships its input checks), Tested
+ships unchecked; `ensures` -> trailing comment (proof-time only, matching
+Dafny's compiled output); `/` -> `//` (ward0 int division), quantifiers ->
+`all`/`any` generator exprs, `for i in range(lo,hi)` + invariant comments,
+`Ok(())` -> `Ok(None)` so `{"ok": null}` hidden-test literals compare equal
+via the emitted `__eq__`.
+**E11 gate (legs A–D all PASS, 48 s):** leg A — w1–w8 marker parity: the
+emitted-Python per-case marker list (PASS/OKLEAK/ERRFAIL, the exact
+`_build_main_b` semantics) EQUALS the elaborator-emitted-Dafny marker list
+from the same IR, task for task; the Python leg is exec-only (0 dafny
+invocations in the check leg). leg B — boundary enforcement through the
+Python backend on all 8 buggy w-tasks' `violation_probes` (61 probes):
+enforce-on converts every violation=true probe to `Err("contract violation")`
+(never leaks the stub's violating output) and enforce-off differs from
+enforce-on (the wrapper does real work, not a vacuous re-wrap); the rule is
+shape-agnostic — w3's session_valid is an UNDER-grant (stub returns Err where
+the contract demands Ok at token=1000), caught by the same conversion. 20
+contradictions converted. leg C — t2/t3 extern-free parity: the 22-task
+Phase-0/1 corpus (loops + invariants, quantifiers, List<int>) runs through the
+emitted Python and the pass set equals `run_hidden_tests_dafny` on the same
+IR (22/22). leg D — structural: no `dafny` in any emitted output, and T4
+holds through the backend (exactly one wrapper `_stub(` call per extern, never
+from a caller fn body). Unit tests `wardcore/test_py_backend.py` **14/14**
+(no Dafny — emission-shape + exec-level incl. the enforce on/off delta).
+Reviewer-caught fixes: probe results keyed by INDEX not violation-boolean
+(duplicate probes were collapsing), the under-grant shape, and the leg-D stub
+call count (def lines excluded). Full regression green: wardcore suite,
+transpiler/harness/grammar, gates E1 (73/73 + 73/73) / E3 / E4 / E4b / E5 /
+E5-real / E6 / E8 / E10 / E11. Evidence: `experiments/runs/e11_gate.jsonl`.
+The composition-first verified library (design §6) is the remaining open half
+of the '4' row.
 **Companion docs:** `../files/ward-language-design.md` (§4 core calculus, §4c
 tiers, §4c.1 extern-call rule, §5 elaboration, §8 what-it-takes),
 `../files/PHASE1_REPORT.md` (decision + findings),
@@ -476,6 +696,8 @@ cheap, solo-runnable — same posture as Phase 0/1.
 | **E7** | No model regression | Real-model W arm on the 8 w-tasks through the new pipeline ≥ Phase-1 W−enforce rate (7/8); **effort ratio vs D ≤ 0.7 measured on the harder multi-function oracle scenarios (oracle verify ≥ 5 s floor) — NOT the Phase-1 w-task set, where the ratio already failed C3b under both measurements (0.77 live / 1.15 controlled, Finding 7)** | W vs D, real model |
 | **E8** | Repair-loop legibility | Structured error triples are emitted and surface-translated; measured by a repair probe: given the structured error, the model converges on the fixed attempt ≥ baseline retry rate | Repair probe |
 | **E9** (Phase 2.5 preview) | Certificate artifact checkable standalone | A `.proof` emitted for oracle tasks validates via the dependency-free checker with no Dafny/Z3 installed; tampering (source, trust string, verdict) invalidates it (exit 1); production cost ≤ 5% of measured verify + token cost | New cert probes + oracle tasks |
+| **E10** (first slice of the '3+' roadmap row) | Standalone SMT-backed checker (Z3-direct) | w1–w8 all verify through `Z3ModuleVerifier` with 0 dafny invocations in the check leg; a buggy caller ignoring an extern's Err and an overclaimed contract both FAIL with rendered counterexamples; per-fn effort metered (Tested never run); Z3 verdict agrees with `dafny verify` 8/8 on the same emitted sources | New z3 backend + gate runner |
+| **E11** (first slice of the '4' roadmap row) | Multi-target backend: Python emitter | w1–w8 marker parity (emitted Python == elaborator-emitted Dafny, same IR); boundary enforcement through the emitted Python on all 61 violation probes (over- and under-grant shapes both converted to Err("contract violation")); t2/t3 pass-set parity 22/22; no dafny in output, T4 holds | New `py_backend` + gate runner |
 
 **Decision rules (pre-registered):**
 - **E1 fail** → stop; the pipeline regressed the validated core — fix before any
@@ -585,7 +807,7 @@ blocked on spend approval).
 
 | # | Instrument | Measured result | Verdict |
 |---|---|---|---|
-| I1 | Specification Tightness τ | **Calibrated on the full corpus (2026-08-01):** 41/74 tasks measured (33 unevaluable: quantifiers/len/str-rets — honest bounded-domain limit), mean τ = 0.575, median 0.578, min 0.000, max 1.000; vacuous control (ensures true) scores **0.0** — the instrument separates. Reference-Proven floor 0.234 (w7). **τ₀ decision (pre-registered): TAU0 = 0.2** — above vacuous, below the reference-Proven floor, so every gold-standard Proven spec keeps its tier; the midpoint 0.5 was rejected because it demotes 3/12 reference Proven specs (w5/w7/w12 pin is_ok but not the value). Gate runner: `python -m wardcore.tightness_gate` (82 fns, 0 demotions at 0.2; 3 demotions at strict 0.5) | **Works — gate built** (wardcore/tightness_gate.py + 13 tests; additive, no pipeline change) |
+| I1 | Specification Tightness τ | **Calibrated on the full corpus (2026-08-01):** 41/74 tasks measured (33 unevaluable: quantifiers/len/str-rets — honest bounded-domain limit), mean τ = 0.575, median 0.578, min 0.000, max 1.000; vacuous control (ensures true) scores **0.0** — the instrument separates. Reference-Proven floor 0.234 (w7). **τ₀ decision (pre-registered): TAU0 = 0.2** — above vacuous, below the reference-Proven floor, so every gold-standard Proven spec keeps its tier; the midpoint 0.5 was rejected because it demotes 3/12 reference Proven specs (w5/w7/w12 pin is_ok but not the value). Gate runner: `python -m wardcore.tightness_gate` (82 fns, 0 demotions at 0.2; 3 demotions at strict 0.5). **Repair-loop wiring (2026-08-02):** `measure_source` now records a per-clause τ breakdown (`clauses`) and `Elaborator.diagnose` calls `annotate_tightness` — a Proven fn scoring τ < TAU0 gets the τ value and the specific weak `ensures` clause(s) appended to its error triples (or a standalone `kind="tightness"` triple when the vacuous spec verified with no error), a concrete spec-fixing target for the repair loop. Advisory-first: no tier changes, no fabricated errors | **Works — gate built** (wardcore/tightness_gate.py + 13 tests; additive, no pipeline change). **Wired into the repair loop** (wardcore/error_translation.py `annotate_tightness` + elaborator `diagnose`; tests in test_tightness.py + test_error_translation.py) |
 | I2 | Boundary Immunity | Dafny verifies 5/5 on the **full ∀-extern metatheorem** (`boundary_immunity_metatheorem.dfy`): generic over any extern contract C and any core guarantee Q — `Wrap_C(r) == Err("contract violation") ∨ Q(Wrap_C(r))` given `∀rr. C(x,rr) ⇒ Q(rr)`; lemmas WrapConforming/WrapViolating/BoundaryImmunityMetatheorem/Corollary + generic CallerGeneric all verify | **Proven — the theorem is generic (one proof for all programs), not per-instance** |
 | I3 | Verification-Load Index | 70 tasks (62 t + 8 w), features have real variance on t-tasks; LOO 70/70 within 2× BUT median ratio 1.04 — E[N] is near-constant (1.00–1.80), so the 2× gate is trivially satisfied; verify_s leg: only 8 w-tasks have it (singular fit), per-feature corr: nonlinear_ops +0.699, externs −0.519 | **Inconclusive, honestly**: the corpus's attempt variance is too small to validate the index; needs the harder E7 oracle set (oracle verify ≥ 5 s floor) or real-model runs |
 | I4 | Guide Saturation | 2-point p(G) from existing W/D arms (same 8 w-tasks): p(406 words) = 0.750, p(149 words) = 0.750 — FLAT; E[N] W 1.12 vs D 1.62; saturation curve unidentifiable from two equal points (G0 → ∞); content confound (ward0 vs raw Dafny guides differ in language, not only length) | **Not testable without spend** — the pre-registered ≥ 4-length controlled sweep (same guide content, varying length) is the required test and remains spend-gated |

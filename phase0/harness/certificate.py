@@ -17,11 +17,14 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
 
 from harness.dafny_runner import DafnyRunner
+from wardcore.tightness_pass import measure_source
 
 CERT_FORMAT = "ward-cert/v0.1"
 
@@ -41,6 +44,40 @@ PROBE_TASKS = [
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+_TOOLCHAIN_CACHE: dict | None = None
+
+
+def detect_toolchain(enforce: bool, verify_limit: int) -> dict:
+    """Toolchain versions detected from the installed binaries (fall back to
+    the known-good defaults if a probe fails). Keeps the certificate's
+    toolchain block honest without lying about drift."""
+    global _TOOLCHAIN_CACHE
+    if _TOOLCHAIN_CACHE is None:
+        versions = {"dafny": "4.11.0", "z3": "4.12.1"}
+        for exe, key in (("dafny", "dafny"), ("z3", "z3")):
+            path = shutil.which(exe)
+            if not path:
+                continue
+            try:
+                out = subprocess.run(
+                    [path, "--version"], capture_output=True, text=True,
+                    timeout=15, check=False,
+                ).stdout
+            except (OSError, subprocess.TimeoutExpired):
+                continue
+            m = re.search(r"(\d+\.\d+\.\d+)", out)
+            if m:
+                versions[key] = m.group(1)
+        _TOOLCHAIN_CACHE = versions
+    return {
+        "ward_core": "0.1",
+        "dafny": _TOOLCHAIN_CACHE["dafny"],
+        "z3": _TOOLCHAIN_CACHE["z3"],
+        "enforce_boundary": enforce,
+        "verification_time_limit": verify_limit,
+    }
 
 
 def _dafny_counts(detail: str) -> dict:
@@ -85,17 +122,30 @@ def emit_certificate(
     outcomes: dict,
     trust_manifest: list,
     toolchain: dict,
+    tightness: dict | None = None,
 ) -> dict:
     """Assemble the .proof artifact (design: files/ward-certified-code.md §3).
 
     T6 semantics are honored per function: a Tested-tier entry carries
     ``proof: "tested"`` (no proof obligation) and is excluded from the
     VALID-all requirement — only Proven/Contracted entries must verify.
+
+    tightness: optional {fn_name: I1 GateResult dict} (advisory). Each fn
+    entry gains tau / tau_advisory / tau_unevaluable — recorded, never
+    enforced: tau is the measured Specification Tightness of the surface
+    contract, and a low tau (or unevaluable) NEVER changes the tier or the
+    verdict.
     """
     fns = sorted(set(tiers) | set(outcomes))
 
     def fn_entry(fn: str) -> dict:
         o = outcomes.get(fn, {})
+        t = (tightness or {}).get(fn, {})
+        tau = {
+            "tau": t.get("tau"),
+            "tau_advisory": t.get("action"),
+            "tau_unevaluable": t.get("unevaluable"),
+        }
         tier = tiers.get(fn, "Proven")
         if tier == "Tested":
             # No proof obligation (T6): the tier, not a raw-verify outcome,
@@ -109,6 +159,7 @@ def emit_certificate(
                 "verified": 0,
                 "errors": 0,
                 "verify_s": round(o.get("verify_s", 0.0), 3),
+                **tau,
             }
         return {
             "name": fn,
@@ -117,6 +168,7 @@ def emit_certificate(
             "verified": o.get("verified", 0),
             "errors": o.get("errors", 0),
             "verify_s": round(o.get("verify_s", 0.0), 3),
+            **tau,
         }
 
     proof_carrying = [
@@ -171,13 +223,7 @@ def probe_one(task_id: str, enforce: bool = False, verify_limit: int = 30) -> di
             "verify_s": verify_s,
         }
     }
-    toolchain = {
-        "ward_core": "0.1",
-        "dafny": "4.11.0",
-        "z3": "4.12.1",
-        "enforce_boundary": enforce,
-        "verification_time_limit": verify_limit,
-    }
+    toolchain = detect_toolchain(enforce, verify_limit)
 
     # Certificate emission itself (hash + json) — the marginal cost.
     t_emit = time.perf_counter()
@@ -189,6 +235,9 @@ def probe_one(task_id: str, enforce: bool = False, verify_limit: int = 30) -> di
         outcomes=outcomes,
         trust_manifest=build_trust_manifest(task, enforce),
         toolchain=toolchain,
+        # I1 (advisory): per-fn Specification Tightness from the caller's
+        # surface contract — recorded in the .proof, never enforced.
+        tightness=measure_source(ward0_src, tiers),
     )
     emit_s = time.perf_counter() - t_emit
 

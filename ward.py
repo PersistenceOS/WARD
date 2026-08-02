@@ -218,11 +218,11 @@ def _cmd_setup(args) -> int:
     if sys.platform == "win32":
         venv_py = repo / "phase0" / ".venv" / "Scripts" / "python.exe"
         venv_hint = ("python -m venv phase0/.venv && "
-                     "phase0/.venv/Scripts/python -m pip install lark")
+                     "phase0/.venv/Scripts/python -m pip install lark z3-solver")
     else:
         venv_py = repo / "phase0" / ".venv" / "bin" / "python"
         venv_hint = ("python3 -m venv phase0/.venv && "
-                     "phase0/.venv/bin/python -m pip install lark")
+                     "phase0/.venv/bin/python -m pip install lark z3-solver")
     venv_ok = venv_py.exists()
     venv_reported = False  # avoid double-reporting one failure
     if args.create_venv and not venv_ok:
@@ -239,6 +239,13 @@ def _cmd_setup(args) -> int:
                     "python app-execution alias can produce a broken venv; install "
                     "Python from python.org (or set PYTHON_BIN), then re-run")
             subprocess.run([str(venv_py), "-m", "pip", "install", "--quiet", "lark"], check=True)
+            try:
+                # z3-solver powers the standalone z3 backend (E10). Non-fatal:
+                # check/proof run through Dafny's own Z3 without it.
+                subprocess.run([str(venv_py), "-m", "pip", "install", "--quiet", "z3-solver"], check=True)
+            except subprocess.CalledProcessError as exc:
+                print(f"  note: z3-solver install failed ({exc}) — the standalone z3 "
+                      "backend (E10) is unavailable; check/proof still work.")
             venv_ok = True
         except (OSError, subprocess.CalledProcessError) as exc:
             # pip needs network; a failed install must be a clean problem

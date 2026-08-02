@@ -1,0 +1,56 @@
+// W10 session + ledger - reference module (multi-function: entry + helpers)
+// per-fn tiers: session_transfer Contracted, auth_session Proven, ledger_move Proven
+tier: Contracted
+effects: net, db
+fn session_transfer(user_id: int, otp: int, balance: int, amount: int) -> Result<int, str>
+  requires user_id > 0
+  requires otp >= 0
+  requires balance >= 0
+  requires amount >= 0
+  ensures is_ok(result) == (user_id < 1000 and otp == 123456 and amount <= balance)
+{
+    var a: Result<Unit, str> = auth_session(user_id, otp);
+    if is_err(a) {
+        return Err(unwrap_err(a));
+    }
+    var d: Result<int, str> = ledger_move(balance, amount);
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    return Ok(unwrap_ok(d));
+}
+
+tier: Proven
+effects: net
+fn auth_session(user_id: int, otp: int) -> Result<Unit, str>
+  requires user_id > 0
+  requires otp >= 0
+  ensures is_ok(result) == (user_id < 1000 and otp == 123456)
+{
+    var a: Result<Unit, str> = session_validate(user_id, otp);
+    if is_ok(a) != (user_id < 1000 and otp == 123456) {
+        return Err("contract violation");
+    }
+    if is_err(a) {
+        return Err(unwrap_err(a));
+    }
+    return Ok(unwrap_ok(a));
+}
+
+tier: Proven
+effects: db
+fn ledger_move(balance: int, amount: int) -> Result<int, str>
+  requires balance >= 0
+  requires amount >= 0
+  ensures is_ok(result) == (amount <= balance)
+  ensures (not is_ok(result)) or unwrap_ok(result) == balance - amount
+{
+    var d: Result<int, str> = ledger_debit(balance, amount);
+    if is_ok(d) != (amount <= balance) {
+        return Err("contract violation");
+    }
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    return Ok(unwrap_ok(d));
+}

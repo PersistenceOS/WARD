@@ -1,0 +1,62 @@
+{
+  "id": "w12_hold_release",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "hold_and_release",
+  "tiers": {
+    "hold_and_release": "Proven",
+    "hold_funds": "Contracted",
+    "release_hold": "Proven"
+  },
+  "effects": {
+    "hold_and_release": ["mut"],
+    "hold_funds": ["mut"],
+    "release_hold": ["mut"]
+  },
+  "deps": [
+    "escrow@^2.0.0"
+  ],
+  "spec": "Implement `hold_and_release`: place a hold on funds, then release it by reference. The escrow service places a hold for amounts up to its per-hold limit, returning the hold id as Ok(hold_id); larger amounts are rejected with Err(\"hold limit\"). The release service accepts hold ids below 1000 and rejects stale ones with Err(\"no such hold\"). A successful hold+release returns the hold id. The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "escrow_hold",
+      "params": [["account", "int"], ["amount", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires account > 0\nrequires amount > 0\nensures is_ok(result) == (amount <= 500)\nensures (not is_ok(result)) or unwrap_ok(result) == account",
+      "effect": "mut",
+      "dep": "escrow@2.3.0",
+      "impl": "def escrow_hold_stub(account, amount):\n    if amount <= 520:\n        return (\"ok\", account)\n    return (\"err\", \"hold limit\")\n",
+      "contract_py": "lambda account, amount, out: (out[0] == 'ok') == (amount <= 500)",
+      "violation_probes": [
+        {"in": [100, 100], "violation": false},
+        {"in": [100, 510], "violation": true},
+        {"in": [100, 600], "violation": false}
+      ]
+    },
+    {
+      "name": "escrow_release",
+      "params": [["hold_id", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires hold_id > 0\nensures is_ok(result) == (hold_id < 1000)\nensures (not is_ok(result)) or unwrap_ok(result) == hold_id",
+      "effect": "mut",
+      "dep": "escrow@2.3.0",
+      "impl": "def escrow_release_stub(hold_id):\n    if hold_id < 1100:\n        return (\"ok\", hold_id)\n    return (\"err\", \"no such hold\")\n",
+      "contract_py": "lambda hold_id, out: (out[0] == 'ok') == (hold_id < 1000)",
+      "violation_probes": [
+        {"in": [100], "violation": false},
+        {"in": [1050], "violation": true},
+        {"in": [1500], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} escrow_hold(account: int, amount: int) returns (result: Result<int, string>)\n  requires account > 0\n  requires amount > 0\n  ensures result.Ok? == (amount <= 500)\n  ensures !result.Ok? || result.value == account\n\nmethod {:extern}{:axiom} escrow_release(hold_id: int) returns (result: Result<int, string>)\n  requires hold_id > 0\n  ensures result.Ok? == (hold_id < 1000)\n  ensures !result.Ok? || result.value == hold_id",
+  "reference_dafny_caller": "method hold_and_release(account: int, amount: int, hold_id: int) returns (result: Result<int, string>)\n  requires account > 0\n  requires amount > 0\n  requires hold_id > 0\n  ensures result.Ok? == (amount <= 500 && hold_id < 1000)\n{\n  var h := hold_funds(account, amount);\n  if !h.Ok? {\n    result := Err(h.error);\n    return;\n  }\n  var r := release_hold(hold_id);\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  result := Ok(r.value);\n}\n\nmethod hold_funds(account: int, amount: int) returns (result: Result<int, string>)\n  requires account > 0\n  requires amount > 0\n  ensures result.Ok? == (amount <= 500)\n  ensures !result.Ok? || result.value == account\n{\n  var h := escrow_hold(account, amount);\n  if h.Ok? != (amount <= 500) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !h.Ok? {\n    result := Err(h.error);\n    return;\n  }\n  result := Ok(h.value);\n}\n\nmethod release_hold(hold_id: int) returns (result: Result<int, string>)\n  requires hold_id > 0\n  ensures result.Ok? == (hold_id < 1000)\n  ensures !result.Ok? || result.value == hold_id\n{\n  var r := escrow_release(hold_id);\n  if r.Ok? != (hold_id < 1000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  result := Ok(r.value);\n}",
+  "hidden_tests": [
+    {"in": [100, 100, 100], "out": {"ok": 100}},
+    {"in": [100, 500, 100], "out": {"ok": 100}},
+    {"in": [100, 510, 100], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [100, 600, 100], "out": {"err": "hold limit"}},
+    {"in": [100, 100, 1050], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [100, 100, 1500], "out": {"err": "no such hold"}}
+  ]
+}

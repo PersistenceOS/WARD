@@ -277,7 +277,7 @@ cd WARD/phase0
 
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install lark
+pip install lark z3-solver      # z3-solver: standalone z3 backend (E10), non-fatal
 
 # try the CLI on a real example
 cd ..
@@ -304,13 +304,13 @@ curl -fsSL https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.sh 
 iex (irm https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.ps1)
 ```
 
-This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `phase0/.venv`, installs `lark`, runs `ward.py setup`, and prints a ready-check. Dafny + Z3 are *checked*, not installed — see the note at the end.
+This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `phase0/.venv`, installs `lark` (+ `z3-solver` for the standalone z3 backend — non-fatal if it fails), runs `ward.py setup`, and prints a ready-check. Dafny + Z3 are *checked*, not installed — see the note at the end.
 
 ### One-command setup (from the repo)
 
 ```bash
 python ward.py setup                # install skill + rule globally, check venv + toolchain
-python ward.py setup --create-venv  # also create phase0/.venv + install lark if missing
+python ward.py setup --create-venv  # also create phase0/.venv + install lark and z3-solver if missing
 python ward.py setup --dry-run      # show what it would do, write nothing
 ```
 

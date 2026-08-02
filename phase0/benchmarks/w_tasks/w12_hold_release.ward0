@@ -1,0 +1,55 @@
+// W12 hold + release - reference module (multi-function: entry + helpers)
+// per-fn tiers: hold_and_release Proven, hold_funds Contracted, release_hold Proven
+tier: Proven
+effects: mut
+fn hold_and_release(account: int, amount: int, hold_id: int) -> Result<int, str>
+  requires account > 0
+  requires amount > 0
+  requires hold_id > 0
+  ensures is_ok(result) == (amount <= 500 and hold_id < 1000)
+{
+    var h: Result<int, str> = hold_funds(account, amount);
+    if is_err(h) {
+        return Err(unwrap_err(h));
+    }
+    var r: Result<int, str> = release_hold(hold_id);
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    return Ok(unwrap_ok(r));
+}
+
+tier: Contracted
+effects: mut
+fn hold_funds(account: int, amount: int) -> Result<int, str>
+  requires account > 0
+  requires amount > 0
+  ensures is_ok(result) == (amount <= 500)
+  ensures (not is_ok(result)) or unwrap_ok(result) == account
+{
+    var h: Result<int, str> = escrow_hold(account, amount);
+    if is_ok(h) != (amount <= 500) {
+        return Err("contract violation");
+    }
+    if is_err(h) {
+        return Err(unwrap_err(h));
+    }
+    return Ok(unwrap_ok(h));
+}
+
+tier: Proven
+effects: mut
+fn release_hold(hold_id: int) -> Result<int, str>
+  requires hold_id > 0
+  ensures is_ok(result) == (hold_id < 1000)
+  ensures (not is_ok(result)) or unwrap_ok(result) == hold_id
+{
+    var r: Result<int, str> = escrow_release(hold_id);
+    if is_ok(r) != (hold_id < 1000) {
+        return Err("contract violation");
+    }
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    return Ok(unwrap_ok(r));
+}

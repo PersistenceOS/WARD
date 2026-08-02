@@ -17,7 +17,10 @@
       "proof": "verified",
       "verified": 2,
       "errors": 0,
-      "verify_s": 2.135
+      "verify_s": 1.353,
+      "tau": 0.321,
+      "tau_advisory": "keep",
+      "tau_unevaluable": null
     }
   ],
   "trust_boundary": [

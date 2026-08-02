@@ -1,0 +1,62 @@
+{
+  "id": "w11_idempotent_retry",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "retry_payment",
+  "tiers": {
+    "retry_payment": "Tested",
+    "dedup_check": "Proven",
+    "charge_once": "Proven"
+  },
+  "effects": {
+    "retry_payment": ["db", "net"],
+    "dedup_check": ["db"],
+    "charge_once": ["net"]
+  },
+  "deps": [
+    "dedup@^1.0.0",
+    "pay@^4.0.0"
+  ],
+  "spec": "Implement `retry_payment`: a payment is submitted exactly once per transaction id. The dedup service checks whether the transaction id was already processed (transaction ids below 1000 are new, larger ones are duplicates Err(\"duplicate\")); the gateway charges amounts up to its per-transaction limit and declines larger ones with Err(\"declined\"). A successfully processed payment is Ok(()). The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "dedup_lookup",
+      "params": [["tx_id", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires tx_id > 0\nensures is_ok(result) == (tx_id < 1000)",
+      "effect": "db",
+      "dep": "dedup@1.2.0",
+      "impl": "def dedup_lookup_stub(tx_id):\n    if tx_id < 1100:\n        return (\"ok\", None)\n    return (\"err\", \"duplicate\")\n",
+      "contract_py": "lambda tx_id, out: (out[0] == 'ok') == (tx_id < 1000)",
+      "violation_probes": [
+        {"in": [500], "violation": false},
+        {"in": [1050], "violation": true},
+        {"in": [1500], "violation": false}
+      ]
+    },
+    {
+      "name": "gateway_charge",
+      "params": [["amount", "int"], ["token", "str"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires amount > 0\nensures is_ok(result) == (amount <= 100)",
+      "effect": "net",
+      "dep": "pay@4.2.0",
+      "impl": "def gateway_charge_stub(amount, token):\n    if amount <= 120:\n        return (\"ok\", None)\n    return (\"err\", \"declined\")\n",
+      "contract_py": "lambda amount, token, out: (out[0] == 'ok') == (amount <= 100)",
+      "violation_probes": [
+        {"in": [50, "tok"], "violation": false},
+        {"in": [110, "tok"], "violation": true},
+        {"in": [150, "tok"], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} dedup_lookup(tx_id: int) returns (result: Result<(), string>)\n  requires tx_id > 0\n  ensures result.Ok? == (tx_id < 1000)\n\nmethod {:extern}{:axiom} gateway_charge(amount: int, token: string) returns (result: Result<(), string>)\n  requires amount > 0\n  ensures result.Ok? == (amount <= 100)",
+  "reference_dafny_caller": "method retry_payment(tx_id: int, amount: int, token: string) returns (result: Result<(), string>)\n  requires tx_id > 0\n  requires amount > 0\n  ensures result.Ok? == (tx_id < 1000 && amount <= 100)\n{\n  var d := dedup_check(tx_id);\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  var c := charge_once(amount, token);\n  if !c.Ok? {\n    result := Err(c.error);\n    return;\n  }\n  result := Ok(());\n}\n\nmethod dedup_check(tx_id: int) returns (result: Result<(), string>)\n  requires tx_id > 0\n  ensures result.Ok? == (tx_id < 1000)\n{\n  var d := dedup_lookup(tx_id);\n  if d.Ok? != (tx_id < 1000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  result := Ok(());\n}\n\nmethod charge_once(amount: int, token: string) returns (result: Result<(), string>)\n  requires amount > 0\n  ensures result.Ok? == (amount <= 100)\n{\n  var c := gateway_charge(amount, token);\n  if c.Ok? != (amount <= 100) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !c.Ok? {\n    result := Err(c.error);\n    return;\n  }\n  result := Ok(());\n}",
+  "hidden_tests": [
+    {"in": [500, 50, "tok_ok"], "out": {"ok": null}},
+    {"in": [1050, 50, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [1500, 50, "tok_ok"], "out": {"err": "duplicate"}},
+    {"in": [500, 110, "tok_ok"], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [500, 150, "tok_ok"], "out": {"err": "declined"}}
+  ]
+}

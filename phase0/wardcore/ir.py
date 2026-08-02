@@ -126,8 +126,23 @@ class StrLit(Expr):
 
 
 @dataclass(frozen=True)
+class UnitLit(Expr):
+    """The `()` literal (ward0: unit_lit; Dafny: `()`)."""
+
+
+@dataclass(frozen=True)
 class Var(Expr):
     name: str
+
+
+@dataclass(frozen=True)
+class Paren(Expr):
+    """Explicit source parentheses. The elaborator preserves them so Dafny
+    emission is byte-identical to the Phase-0/1 transpiler output (E1 gate).
+    The surface grammar renders `( expr )` as its own node; folding it away
+    would change precedence in the emitted code."""
+
+    inner: Expr
 
 
 @dataclass(frozen=True)
@@ -194,6 +209,8 @@ def _expr_children(e: Expr) -> tuple[Expr, ...]:
         return (e.lo, e.hi, e.body)
     if isinstance(e, Call):
         return e.args
+    if isinstance(e, Paren):
+        return (e.inner,)
     return ()
 
 
@@ -201,6 +218,10 @@ def expr_names(e: Expr) -> Iterator[str]:
     """Yield every variable name referenced in an expression."""
     if isinstance(e, Var):
         yield e.name
+    if isinstance(e, Indexed):
+        yield e.base
+    if isinstance(e, Quant):
+        yield e.var
     for child in _expr_children(e):
         yield from expr_names(child)
 
@@ -366,6 +387,7 @@ class ExternFn:
     ensures: tuple[Contract, ...] = ()
     trust: str = ""
     effect: EffectKind = EffectKind.NET
+    dep: str = ""  # E4b dependency reference "name@version" (design doc §5 resp. 5)
 
 
 @dataclass(frozen=True)
@@ -382,12 +404,30 @@ class Module:
 # Structural validation (the checkable T1–T8 obligations)
 # ---------------------------------------------------------------------------
 
-def validate_module(module: Module) -> list[str]:
+def validate_module(module: Module, check_t4: bool = True, check_t3_trust: bool = True, check_t5: bool = True) -> list[str]:
     """Return a list of structural problems (empty = module is well-formed).
 
     Encodes the T1–T8 obligations that are checkable at the IR level without a
     full elaborator. Per-path linearity (T7 full), effect *inference* (T5), and
     termination analysis are deferred to later weeks and noted where relevant.
+
+    check_t4=False defers the checked-routing obligation (T4): the week-2
+    elaborator desugars surface ward0 where stub calls are written plain, and
+    the week-3 extern pass (R3) rewrites them to `_checked` + validates T4.
+    Week-1 callers keep the default (check_t4=True).
+
+    check_t3_trust=False defers the `trust:` half of T3: the week-2 elaborator
+    accepts externs that carry a contract but no trust annotation (the Phase-0/1
+    reference corpus composes externs from JSON descriptors without `trust:`
+    lines), and the week-3 extern pass (R3/T3) attaches and validates trust.
+    The contract-mandatory half of T3 stays enforced either way.
+
+    check_t5=False defers the declared-but-unused half of T5 to the week-4
+    effects pass (wardcore.effects_pass.EffectsPass): this IR-level check only
+    sees DIRECT extern calls and the net/db/fs kinds, while the core pass does
+    the full T5 (escape + unused, all five kinds, transitively through fn
+    calls). Week-4 callers (the elaborator's type_check) pass check_t5=False;
+    the pass is the authoritative T5 in the pipeline.
     """
     problems: list[str] = []
     extern_names = {e.name for e in module.externs}
@@ -399,11 +439,11 @@ def validate_module(module: Module) -> list[str]:
     problems += [f"duplicate extern name: {n}" for n in dup_externs]
     problems += [f"duplicate function name: {n}" for n in dup_fns]
 
-    # ---- T3: extern contract + trust mandatory ---------------------------
+    # ---- T3: extern contract mandatory; trust mandatory (deferrable) -----
     for ext in module.externs:
         if not (ext.requires or ext.ensures):
             problems.append(f"extern {ext.name}: contract is mandatory (T3)")
-        if not ext.trust.strip():
+        if check_t3_trust and not ext.trust.strip():
             problems.append(f"extern {ext.name}: trust annotation is mandatory (T3)")
 
     for fn in module.fns:
@@ -417,21 +457,23 @@ def validate_module(module: Module) -> list[str]:
                     )
 
         # ---- T4: every extern call is routed through _checked ------------
-        for call in _fn_calls(fn):
-            if call.callee in extern_names and not call.checked:
-                problems.append(
-                    f"{fn.name}: direct stub call to {call.callee} is not "
-                    "routed through _checked wrapper (T4)"
-                )
+        if check_t4:
+            for call in _fn_calls(fn):
+                if call.callee in extern_names and not call.checked:
+                    problems.append(
+                        f"{fn.name}: direct stub call to {call.callee} is not "
+                        "routed through _checked wrapper (T4)"
+                    )
 
         # ---- T5: declared effects must be used (net/db/fs checkable) -----
-        used_effects = _used_effects(fn, module)
-        for eff in fn.effects:
-            if eff in (EffectKind.NET, EffectKind.DB, EffectKind.FS):
-                if eff not in used_effects:
-                    problems.append(
-                        f"{fn.name}: declared effect {eff.value} is unused (T5)"
-                    )
+        if check_t5:
+            used_effects = _used_effects(fn, module)
+            for eff in fn.effects:
+                if eff in (EffectKind.NET, EffectKind.DB, EffectKind.FS):
+                    if eff not in used_effects:
+                        problems.append(
+                            f"{fn.name}: declared effect {eff.value} is unused (T5)"
+                        )
 
         # ---- T7 (structural pre-check): linear params must be used -------
         used_names = set(_fn_names(fn))

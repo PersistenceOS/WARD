@@ -2,8 +2,8 @@
 
 import unittest
 
-from wardcore.tightness import build_output_space, compute_tightness
-from wardcore.tightness_gate import TightnessGate
+from wardcore.tightness import build_output_space, clause_tightness, compute_tightness
+from wardcore.tightness_gate import TAU0, TightnessGate
 
 
 class TestTightnessEngine(unittest.TestCase):
@@ -93,6 +93,51 @@ class TestTightnessGate(unittest.TestCase):
         rep = gate.report(fns)
         self.assertEqual(rep["checked"], 2)
         self.assertEqual(len(rep["demoted"]), 1)
+
+
+class TestClauseTightness(unittest.TestCase):
+    """I1 per-clause breakdown: which specific ensures clauses pin the output
+    (the repair-loop fix target)."""
+
+    def test_marks_weak_vacuous_clause(self):
+        # one strong clause + one vacuous clause: only the vacuous one is weak
+        clauses = clause_tightness([("x", "int")], "int", [],
+                                   ["result == x", "true"], TAU0)
+        self.assertEqual(len(clauses), 2)
+        strong, weak = clauses[0], clauses[1]
+        self.assertFalse(strong["weak"])
+        self.assertGreaterEqual(strong["tau"], 0.9)
+        self.assertTrue(weak["weak"])
+        self.assertLess(weak["tau"], 0.05)
+
+    def test_all_clauses_have_kind_ensures(self):
+        clauses = clause_tightness([("x", "int")], "int", ["x > 0"],
+                                   ["result == x"], TAU0)
+        self.assertTrue(all(c["kind"] == "ensures" for c in clauses))
+        self.assertEqual(len(clauses), 1)
+
+    def test_unevaluable_clause_never_weak(self):
+        # a quantifier ensures clause is unevaluable -> tau None, weak False
+        # (the honest bounded-domain limit: never named as the fix target)
+        clauses = clause_tightness([("xs", "List<int>")], "bool", [],
+                                   ["forall i in range(0, 1) :: result"], TAU0)
+        self.assertEqual(len(clauses), 1)
+        self.assertIsNone(clauses[0]["tau"])
+        self.assertFalse(clauses[0]["weak"])
+
+    def test_w5_style_is_ok_clause_weak_at_strict_tau0(self):
+        # w5-style: pins is_ok but not the unwrapped value -> weak at the
+        # strict 0.5 threshold, kept at the calibrated 0.2
+        clauses = clause_tightness(
+            [("amount", "int")], "Result<int, str>", [],
+            ["is_ok(result) == (amount <= 500)"], 0.5,
+        )
+        self.assertTrue(clauses[0]["weak"])
+        clauses2 = clause_tightness(
+            [("amount", "int")], "Result<int, str>", [],
+            ["is_ok(result) == (amount <= 500)"], TAU0,
+        )
+        self.assertFalse(clauses2[0]["weak"])
 
 
 if __name__ == "__main__":

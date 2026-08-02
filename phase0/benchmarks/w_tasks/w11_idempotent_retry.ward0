@@ -1,0 +1,51 @@
+// W11 idempotent retry - reference module (multi-function: entry + helpers)
+// per-fn tiers: retry_payment Tested, dedup_check Proven, charge_once Proven
+tier: Tested
+effects: db, net
+fn retry_payment(tx_id: int, amount: int, token: str) -> Result<Unit, str>
+  requires tx_id > 0
+  requires amount > 0
+  ensures is_ok(result) == (tx_id < 1000 and amount <= 100)
+{
+    var d: Result<Unit, str> = dedup_check(tx_id);
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    var c: Result<Unit, str> = charge_once(amount, token);
+    if is_err(c) {
+        return Err(unwrap_err(c));
+    }
+    return Ok(unwrap_ok(c));
+}
+
+tier: Proven
+effects: db
+fn dedup_check(tx_id: int) -> Result<Unit, str>
+  requires tx_id > 0
+  ensures is_ok(result) == (tx_id < 1000)
+{
+    var d: Result<Unit, str> = dedup_lookup(tx_id);
+    if is_ok(d) != (tx_id < 1000) {
+        return Err("contract violation");
+    }
+    if is_err(d) {
+        return Err(unwrap_err(d));
+    }
+    return Ok(unwrap_ok(d));
+}
+
+tier: Proven
+effects: net
+fn charge_once(amount: int, token: str) -> Result<Unit, str>
+  requires amount > 0
+  ensures is_ok(result) == (amount <= 100)
+{
+    var c: Result<Unit, str> = gateway_charge(amount, token);
+    if is_ok(c) != (amount <= 100) {
+        return Err("contract violation");
+    }
+    if is_err(c) {
+        return Err(unwrap_err(c));
+    }
+    return Ok(unwrap_ok(c));
+}

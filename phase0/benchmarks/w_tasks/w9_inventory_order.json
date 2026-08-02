@@ -1,0 +1,64 @@
+{
+  "id": "w9_inventory_order",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "place_order",
+  "tiers": {
+    "place_order": "Proven",
+    "check_stock": "Proven",
+    "reserve_inventory": "Contracted"
+  },
+  "effects": {
+    "place_order": ["db", "fs"],
+    "check_stock": ["db"],
+    "reserve_inventory": ["fs"]
+  },
+  "deps": [
+    "inventory@^2.0.0",
+    "orders@^1.0.0"
+  ],
+  "spec": "Implement `place_order`: an order is placed by first checking stock for the item (items with id below 1000 are known), then reserving inventory. The stock service returns the confirmed quantity as Ok(qty) for known items and Err(\"out of stock\") otherwise; the reservation service accepts orders up to its per-order limit and rejects larger ones with Err(\"qty limit\"). A successful order returns the confirmed quantity as the order id. The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "stock_check",
+      "params": [["item", "int"], ["qty", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires item > 0\nrequires qty > 0\nensures is_ok(result) == (item < 1000)\nensures (not is_ok(result)) or unwrap_ok(result) == qty",
+      "effect": "db",
+      "dep": "inventory@2.4.1",
+      "impl": "def stock_check_stub(item, qty):\n    if item < 1100:\n        return (\"ok\", qty)\n    return (\"err\", \"out of stock\")\n",
+      "contract_py": "lambda item, qty, out: (out[0] == 'ok') == (item < 1000)",
+      "violation_probes": [
+        {"in": [500, 10], "violation": false},
+        {"in": [1050, 10], "violation": true},
+        {"in": [1500, 10], "violation": false}
+      ]
+    },
+    {
+      "name": "inventory_reserve",
+      "params": [["item", "int"], ["qty", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires item > 0\nrequires qty > 0\nensures is_ok(result) == (qty <= 20)",
+      "effect": "fs",
+      "dep": "orders@1.5.0",
+      "impl": "def inventory_reserve_stub(item, qty):\n    if qty <= 25:\n        return (\"ok\", None)\n    return (\"err\", \"qty limit\")\n",
+      "contract_py": "lambda item, qty, out: (out[0] == 'ok') == (qty <= 20)",
+      "violation_probes": [
+        {"in": [500, 10], "violation": false},
+        {"in": [500, 21], "violation": true},
+        {"in": [500, 22], "violation": true},
+        {"in": [500, 30], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} stock_check(item: int, qty: int) returns (result: Result<int, string>)\n  requires item > 0\n  requires qty > 0\n  ensures result.Ok? == (item < 1000)\n  ensures !result.Ok? || result.value == qty\n\nmethod {:extern}{:axiom} inventory_reserve(item: int, qty: int) returns (result: Result<(), string>)\n  requires item > 0\n  requires qty > 0\n  ensures result.Ok? == (qty <= 20)",
+  "reference_dafny_caller": "method place_order(item: int, qty: int) returns (result: Result<int, string>)\n  requires item > 0\n  requires qty > 0\n  ensures result.Ok? == (item < 1000 && qty <= 20)\n  ensures !result.Ok? || result.value == qty\n{\n  var s := check_stock(item, qty);\n  if !s.Ok? {\n    result := Err(s.error);\n    return;\n  }\n  var r := reserve_inventory(item, qty);\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  result := Ok(s.value);\n}\n\nmethod check_stock(item: int, qty: int) returns (result: Result<int, string>)\n  requires item > 0\n  requires qty > 0\n  ensures result.Ok? == (item < 1000)\n  ensures !result.Ok? || result.value == qty\n{\n  var s := stock_check(item, qty);\n  if s.Ok? != (item < 1000) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !s.Ok? {\n    result := Err(s.error);\n    return;\n  }\n  result := Ok(s.value);\n}\n\nmethod reserve_inventory(item: int, qty: int) returns (result: Result<(), string>)\n  requires item > 0\n  requires qty > 0\n  ensures result.Ok? == (qty <= 20)\n{\n  var r := inventory_reserve(item, qty);\n  if r.Ok? != (qty <= 20) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !r.Ok? {\n    result := Err(r.error);\n    return;\n  }\n  result := Ok(());\n}",
+  "hidden_tests": [
+    {"in": [500, 10], "out": {"ok": 10}},
+    {"in": [500, 20], "out": {"ok": 20}},
+    {"in": [1050, 10], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [1500, 10], "out": {"err": "out of stock"}},
+    {"in": [500, 21], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [500, 30], "out": {"err": "qty limit"}}
+  ]
+}

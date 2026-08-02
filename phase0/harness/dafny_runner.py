@@ -112,14 +112,41 @@ class DafnyRunner:
         detail = (proc.stdout or "") + (proc.stderr or "")
         return proc.returncode == 0, detail
 
-    def verify_dafny(self, dafny_src: str, timeout: int = 120, verify_limit: int | None = None) -> tuple[bool, str]:
-        """Verify raw Dafny source (no transpilation). Returns (ok, detail)."""
+    def verify_dafny(self, dafny_src: str, timeout: int = 120, verify_limit: int | None = None, filter_symbol: str | None = None, allow_warnings: bool = False, extract_counterexample: bool = False) -> tuple[bool, str]:
+        """Verify raw Dafny source (no transpilation). Returns (ok, detail).
+
+        filter_symbol: verify only the named symbol (`--filter-symbol=<name>`)
+        — the R7 per-proof-obligation effort-metering lever (E5 gate): each
+        function's solver seconds are measured by verifying just that function.
+
+        allow_warnings: pass `--allow-warnings`. Needed ONLY when the module
+        carries a Tested-tier fn: its `{:verify false}` (the tier's declared
+        semantics, T6) triggers Dafny's development-only advisory warning, and
+        without this flag the compiled module would be rejected *despite the
+        proof obligations verifying clean* (R10 documents this friction). This
+        is NOT the R10 wrapper-cheapening case — the `_checked` wrappers stay
+        fully verified.
+
+        extract_counterexample: pass `--extract-counterexample` so failing
+        obligations report model values (`assume <v> == <name>;` lines) — the
+        R8 error-translation pass (E8 gate) parses these into the triple's
+        counterexample field. Experimental in Dafny; off by default so no
+        other gate's timing/output changes.
+        """
         with tempfile.TemporaryDirectory() as td:
             dfy = Path(td) / "task.dfy"
             dfy.write_text(dafny_src, encoding="utf-8")
+            cmd = self._base_cmd(verify_limit)
+            if filter_symbol:
+                cmd += ["--filter-symbol", filter_symbol]
+            if allow_warnings:
+                cmd += ["--allow-warnings"]
+            if extract_counterexample:
+                cmd += ["--extract-counterexample"]
+            cmd += [str(dfy)]
             try:
                 proc = run_capped(
-                    self._base_cmd(verify_limit) + [str(dfy)],
+                    cmd,
                     timeout=timeout,
                     capture_output=True,
                     text=True,
@@ -302,9 +329,12 @@ class DafnyRunner:
             )
         return "\n".join(out)
 
-    def _run_compiled_b(self, dafny_src: str, main: str, task_desc: dict, timeout: int, no_verify: bool = False) -> str:
+    def _run_compiled_b(self, dafny_src: str, main: str, task_desc: dict, timeout: int, no_verify: bool = False, allow_warnings: bool = False) -> str:
         """Translate to Python (optionally skipping verification), inject the stub
-        implementation(s), run, return stdout."""
+        implementation(s), run, return stdout. allow_warnings: pass
+        `--allow-warnings` — needed when the module carries a Tested-tier fn
+        whose `{:verify false}` (tier semantics, R10 note) triggers Dafny's
+        development-only advisory warning (same finding as verify_dafny)."""
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
             dfy = td / "task.dfy"
@@ -313,6 +343,8 @@ class DafnyRunner:
             cmd = [self.dafny, "translate", "py", "--output", str(out_dir)]
             if no_verify:
                 cmd.append("--no-verify")
+            if allow_warnings:
+                cmd.append("--allow-warnings")
             cmd.append(str(dfy))
             proc = run_capped(
                 cmd,
@@ -369,15 +401,28 @@ class DafnyRunner:
         fn_name = self._caller_fn_name(ward0_src)
         main = self._build_main_b(task_desc, fn_name)
         stdout = self._run_compiled_b(dafny_src, main, task_desc, timeout, no_verify=no_verify)
-        markers = []
-        for idx, _case in enumerate(task_desc["hidden_tests"]):
-            for marker in ("PASS", "OKLEAK", "ERRFAIL"):
-                if f"CASE{idx}={marker}" in stdout:
-                    markers.append(marker)
-                    break
-            else:
-                markers.append("NOOUT")
-        return markers
+        return self._parse_b_markers(stdout, len(task_desc["hidden_tests"]))
+
+    def run_emitted_dafny_b_marked(
+        self,
+        task_desc: dict,
+        emitted_dafny: str,
+        fn_name: str,
+        timeout: int = 180,
+        no_verify: bool = False,
+        allow_warnings: bool = False,
+    ) -> list[str]:
+        """Run an already-emitted Dafny source (extern decls + `_checked`
+        wrappers + caller — e.g. the ward-core elaborator's extern-pass output)
+        against the hidden tests with stub injection. Returns per-case markers.
+
+        Unlike run_hidden_tests_dafny_b_marked this does NOT prepend the
+        extern declarations: the emitted source already contains them (and the
+        wrappers), so the caller method name is passed explicitly.
+        """
+        main = self._build_main_b(task_desc, fn_name)
+        stdout = self._run_compiled_b(emitted_dafny, main, task_desc, timeout, no_verify=no_verify, allow_warnings=allow_warnings)
+        return self._parse_b_markers(stdout, len(task_desc["hidden_tests"]))
 
     def run_hidden_tests_dafny_b_marked(self, task_desc: dict, dafny_caller: str, timeout: int = 180, no_verify: bool = False) -> list[str]:
         """Raw-Dafny arm: prepend hand-authored extern declarations (`extern_dafny`
@@ -392,8 +437,13 @@ class DafnyRunner:
             raise RuntimeError("no method found in Dafny caller")
         main = self._build_main_b(task_desc, fn_name)
         stdout = self._run_compiled_b(src, main, task_desc, timeout, no_verify=no_verify)
+        return self._parse_b_markers(stdout, len(task_desc["hidden_tests"]))
+
+    @staticmethod
+    def _parse_b_markers(stdout: str, count: int) -> list[str]:
+        """Parse `CASEi=MARK` lines into per-case markers (PASS|OKLEAK|ERRFAIL|NOOUT)."""
         markers = []
-        for idx, _case in enumerate(task_desc["hidden_tests"]):
+        for idx in range(count):
             for marker in ("PASS", "OKLEAK", "ERRFAIL"):
                 if f"CASE{idx}={marker}" in stdout:
                     markers.append(marker)

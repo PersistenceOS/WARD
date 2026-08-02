@@ -9,7 +9,9 @@
 #
 # What it does:
 #   1. clones (or pulls) the WARD repo into ~/WARD  (override: WARD_DIR=...)
-#   2. creates phase0/.venv and installs `lark` (the only Python dep)
+#   2. creates phase0/.venv and installs the Python deps: `lark` (surface
+#      parsing) + `z3-solver` (the standalone z3 backend). z3-solver is
+#      non-fatal — check/proof run through Dafny's own Z3 without it.
 #   3. runs `ward.py setup` — installs the Claude Code skill + Cursor rule
 #      globally, checks the toolchain
 #   4. prints a per-tool "you're ready" summary
@@ -68,8 +70,12 @@ if [ -z "$VENV_PY" ]; then
     fi
 fi
 
-echo "==> installing lark into the venv…"
+echo "==> installing Python deps (lark + z3-solver)…"
 "$VENV_PY" -m pip install --quiet --upgrade lark
+# z3-solver powers the standalone SMT backend (E10). Non-fatal: the Dafny
+# path (check/proof) uses Dafny's own Z3 and doesn't need it.
+"$VENV_PY" -m pip install --quiet --upgrade z3-solver \
+    || echo "NOTE: z3-solver install failed — the standalone z3 backend (E10) is unavailable; check/proof still work."
 
 # ---- 3. install skills + check toolchain -----------------------------------
 echo "==> running ward.py setup…"

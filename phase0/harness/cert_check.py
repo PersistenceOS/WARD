@@ -18,8 +18,14 @@ Checks (Level-1, per files/ward-certified-code.md §4):
                    monitor flag equals toolchain.enforce_boundary
   5. verdict     — recomputed from functions; must equal the recorded verdict
 
-Level-1 honesty: this validates the artifact and the tier semantics, not the
-SMT proof itself (independent re-derivation is the Phase-3 standalone checker).
+Level-2 (Phase-3 standalone checker, `--re-derive`): the one declared Level-1
+honesty gap — emitted_dafny_sha256 was *declared, not independently re-derived*.
+When enabled, the checker RE-TRANSPILES the bound ward0 source itself (stdlib-only
+re-implementation, `cert_rederive` — no Dafny, no lark, no transpiler, no model)
+and compares the re-derived hash to the recorded emitted_dafny_sha256. This closes
+the source -> emitted binding trust gap: the certificate is only meaningful if the
+code checked is the code shipped, and byte-identical emission (E1) is what makes a
+hash-binding certificate sound at all.
 """
 
 from __future__ import annotations
@@ -41,6 +47,41 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def validate_level2(proof: dict, source: str) -> list[str]:
+    """Phase-3: independently re-transpile the bound source and verify
+    emitted_dafny_sha256. Never raises — a re-transpile failure (or a hash
+    mismatch) is a named violation, not a traceback.
+
+    Uses the certificate's own toolchain.enforce_boundary so the re-derivation
+    runs in the same wrapper mode the emitter used.
+    """
+    problems: list[str] = []
+    tc = proof.get("toolchain")
+    if not isinstance(tc, dict):
+        tc = {}
+    enforce = bool(tc.get("enforce_boundary", False))
+    try:
+        from harness.cert_rederive import RederiveError, transpile as re_transpile
+
+        derived = re_transpile(source, enforce=enforce)
+    except RederiveError as exc:
+        problems.append(f"re-derivation: source did not re-transpile: {exc}")
+        return problems
+    except Exception as exc:  # pragma: no cover - safety net, never raise
+        problems.append(f"re-derivation: internal error: {exc}")
+        return problems
+    got = sha256_text(derived)
+    want = proof.get("emitted_dafny_sha256")
+    if not isinstance(want, str):
+        problems.append("emitted_dafny_sha256: missing")
+    elif got != want:
+        problems.append(
+            "re-derivation: re-transpiled source does not match emitted_dafny_sha256 "
+            f"(got {got[:16]}…, recorded {want[:16]}…)"
+        )
+    return problems
+
+
 def validate(proof: dict, source: str | None) -> list[str]:
     """Return a list of violations (empty list = VALID). Never raises."""
     problems: list[str] = []
@@ -52,6 +93,9 @@ def validate(proof: dict, source: str | None) -> list[str]:
     if not isinstance(module, str) or not module:
         problems.append("module: missing")
     tc = proof.get("toolchain") or {}
+    if not isinstance(tc, dict):
+        problems.append("toolchain: must be a dict")
+        tc = {}
     if not isinstance(tc.get("enforce_boundary"), bool):
         problems.append("toolchain.enforce_boundary: must be a bool")
     vlimit = tc.get("verification_time_limit")
@@ -77,7 +121,7 @@ def validate(proof: dict, source: str | None) -> list[str]:
         problems.append("source_sha256: mismatch — certificate was made for different code")
 
     # 3. tier rules (T6) -----------------------------------------------------
-    for fn in fns or []:
+    for fn in (fns if isinstance(fns, list) else []):
         name, tier, pf = fn.get("name"), fn.get("tier"), fn.get("proof")
         if tier == "Tested" and pf != "tested":
             problems.append(
@@ -115,7 +159,9 @@ def validate(proof: dict, source: str | None) -> list[str]:
     return problems
 
 
-def check_file(proof_path: Path, source_path: Path | None) -> tuple[bool, list[str]]:
+def check_file(
+    proof_path: Path, source_path: Path | None, rederive: bool = False
+) -> tuple[bool, list[str]]:
     """Validate a .proof on disk against an optional source file."""
     try:
         proof = json.loads(proof_path.read_text(encoding="utf-8"))
@@ -128,6 +174,11 @@ def check_file(proof_path: Path, source_path: Path | None) -> tuple[bool, list[s
         except OSError as exc:
             return False, [f"io: cannot read {source_path}: {exc}"]
     problems = validate(proof, source)
+    if rederive:
+        if source is None:
+            problems.append("re-derivation: --source required for --re-derive")
+        else:
+            problems.extend(validate_level2(proof, source))
     return not problems, problems
 
 
@@ -135,9 +186,15 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="validate a ward-cert .proof artifact (no Dafny/Z3)")
     ap.add_argument("proof", help="path to the .proof artifact")
     ap.add_argument("--source", help="path to the ward0 source the certificate binds (recommended)")
+    ap.add_argument(
+        "--re-derive",
+        action="store_true",
+        help="Level-2 (Phase-3): re-transpile the bound source and independently verify "
+        "emitted_dafny_sha256 (closes the Level-1 declared-not-re-derived gap)",
+    )
     args = ap.parse_args(argv)
     ok, problems = check_file(
-        Path(args.proof), Path(args.source) if args.source else None
+        Path(args.proof), Path(args.source) if args.source else None, rederive=args.re_derive
     )
     if ok:
         print("VALID")

@@ -407,3 +407,30 @@ def compute_tightness(params, ret, requires, ensures):
             "tau": round(tau_sum / admissible, 3) if admissible else None,
             "|Y|": len(Y), "admissible": admissible,
             "zero_count": zero_count}
+
+
+def clause_tightness(params, ret, requires, ensures, tau0):
+    """Per-clause Specification Tightness breakdown (I1 repair-loop target).
+
+    Each ENSURES clause is measured IN ISOLATION (requires kept, so the input
+    domain is identical to the whole-contract measurement): tau_i = tau of the
+    contract with ONLY clause i. Returns a list of dicts:
+        {kind, text, tau, weak}
+    where weak = (tau is not None and tau < tau0) — the clauses the repair
+    loop should strengthen. Only ensures clauses pin output entropy, so only
+    they are measured; requires clauses constrain the input domain and are
+    not anti-slop targets. unevaluable clauses get tau=None, weak=False (the
+    honest bounded-domain limit — never flagged as the fix target when we
+    cannot measure them).
+    """
+    out = []
+    for text in ensures:
+        r = compute_tightness(params, ret, requires, [text])
+        tau = r.get("tau")
+        out.append({
+            "kind": "ensures",
+            "text": text,
+            "tau": tau,
+            "weak": tau is not None and tau < tau0,
+        })
+    return out

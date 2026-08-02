@@ -1,7 +1,9 @@
-# WARD ships proofs, not promises — implementation plan (vision, not built)
+# WARD ships proofs, not promises — implementation plan
 
-**Status:** VISION / DESIGN — nothing in this document is built or measured yet. It exists to
-capture the concept and map it onto the existing codebase so we can review where it plugs in.
+**Status:** MOSTLY BUILT (Phase A emitter + Phase C checker complete, gate E9 G1–G4 green;
+Phase-3 standalone re-deriver scoped and **probed feasible** — 5/5 committed artifacts
+re-derive their `emitted_dafny_sha256` in stdlib-only Python; see §10). The vision and the
+hooks below are unchanged; the sections marked *built* are now measured, not design.
 
 **Scoping home:** pre-registered into Phase 2 as **R11 / scope item 3 / gate E9** in
 `../files/ward-phase2-scoping.md` (Phase-2.5 preview, additive to — never load-bearing for —
@@ -116,9 +118,13 @@ boundary into one tamper-evident structure:
 5. **Exit code** — 0 = VALID, 1 = INVALID with the failing field named.
 
 **Honesty constraint:** the checker validates the *artifact* and the *tier semantics*, not the
-SMT proof itself (re-verifying the proof is Phase 3's standalone checker). This is the
-"self-contained" level — it moves trust from "the Ward lab" to "a published, reviewable
-artifact format." A full independent re-verification (no Dafny) is the later milestone.
+SMT proof itself. This is the "self-contained" level — it moves trust from "the Ward lab" to
+"a published, reviewable artifact format." Two distinct later milestones are kept separate:
+(1) **Level-2 re-derivation of the emitted Dafny** (Phase-3 standalone checker, §10 — built
+and probed feasible): the checker re-transpiles the bound ward0 source itself and verifies
+`emitted_dafny_sha256` independently, closing the declared-not-re-derived gap; (2) a full
+independent *re-proof* of the SMT obligations with no Dafny/Z3 — still the long pole, a
+separate future milestone.
 
 **Implementation note:** the minimal checker is a *stripped structural re-implementation*
 (~150-250 lines, no heavy deps) — it must run on a machine with neither Dafny nor Z3 nor the
@@ -181,13 +187,82 @@ README's roadmap updated to show verification-today → certificate-as-shipping-
 - Not a new logic (Hoare logic; see README Formal foundations).
 - Not a cryptographic signature or PKI attestation — it is a *reproducibility artifact*;
   a signed/attested variant is a later, separate decision.
-- Not an independent re-proof of the SMT obligations — that is Phase 3's standalone checker.
+- Not an independent **re-proof** of the SMT obligations — that remains a separate future
+  milestone. Phase-3 Level-2 (§10) independently re-derives the *emitted Dafny* from the
+  bound source (closing the hash-binding gap); it does not re-run the solver.
 - Not a guarantee that the model wrote good code — only that the shipped code satisfies the
   shipped contracts, at the declared tier, and that the trust boundary is fully visible.
 
 ---
 
+## 10. Phase 3 — the standalone re-deriver (Level-2 checking) — BUILT + PROBED
+
+**What this closes:** at Level-1, `emitted_dafny_sha256` is *declared, not independently
+re-derived* — the checker has no transpiler, so the source→emitted binding is trusted. That
+is the one declared honesty gap of the Level-1 checker. Phase 3 closes it inside the same
+standalone, dependency-free checker.
+
+**Design (built, `phase0/harness/cert_rederive.py`):** a stdlib-only re-implementation of the
+ward0→Dafny emission — hand-rolled lexer + recursive-descent parser (mirroring the tree
+shapes the emit logic indexes, including lark's `?`-inlining of single-child rules) + the
+emit logic ported verbatim from `transpiler/transpiler.py` (hoisted-call `wN` counter with
+`_used_names` collision skip, `_subst` result→r in wrapper ensures, var_decl type-drop,
+`and`/`or`→`&&`/`||`, factor MINUS-vs-parens, quantifier bounds, `call_stmt` discard, both
+enforce modes incl. the `_checked` wrappers). No Dafny, no Z3, no lark, no transpiler, no
+wardcore, no model — stdlib only, so **G4 (no-Dafny) is preserved** by construction and by a
+fresh-interpreter test.
+
+**Why this is sound:** the certificate is only meaningful if the code checked is the code
+shipped. E1 already proves the *real* emission is byte-identical (deterministic hashes bind
+code↔proof); the re-deriver independently re-derives that same emission inside the checker,
+so a certificate passes Level-2 **iff** the bound source actually transpiles to the recorded
+Dafny. No code is shared with the real transpiler — a bug in one cannot silently propagate to
+the other; corpus identity is enforced by tests.
+
+**Checker wiring (built):** `cert_check.py --re-derive` runs `validate_level2(proof, source)`
+— re-transpiles the bound source honoring `toolchain.enforce_boundary`, compares the
+re-derived hash to the recorded `emitted_dafny_sha256`, and reports a named violation on any
+mismatch or re-transpile failure. **Never raises** (malformed toolchain/source → clean
+INVALID, exit 1). Level-1 checks are untouched (`--re-derive` off by default), so G2/G3 and
+the Level-1 exit contract are unchanged.
+
+**Feasibility probe (measured, 2026-08-01):**
+- **Byte-identity:** the re-transpiler matches `Ward0Transpiler` **98/98** (task × enforce)
+across the full composed benchmark corpus (w1–w12 + t2/t3) — both enforce modes.
+- **Artifacts:** **5/5** committed `cert_probe` artifacts re-derive their recorded
+  `emitted_dafny_sha256` (`python -m harness.cert_rederive --probe`):
+
+```
+task                source_ok  enforce hash_match
+w1_payment_chain    True       False   True
+w4_order_placement  True       False   True
+w5_currency_roundtripTrue      False   True
+w6_crud_handler     True       False   True
+w7_idempotency      True       False   True
+re-derived emitted_dafny_sha256 matches on 5/5 artifacts
+```
+
+- **Tests:** `harness/test_cert_check.py` 25/25 (incl. Level-2 fidelity, byte-identity,
+tamper on source *and* on the recorded emitted hash, never-raises on malformed inputs, CLI
+exit codes, `--source` required). Full regression green: wardcore suite, transpiler/harness/
+grammar suites, gates E1 (73/73 + 73/73) / E3 / E4 / E4b / E5 / E5-real / E6 / E8.
+
+**Honest boundary:** the re-transpiler's soundness is scoped to the E1-validated corpus
+(keywords like `range` are lexed globally here, contextually in lark — corpus-invisible, and
+byte-identity is re-checked by tests on every composed source).
+
+**Gate (pre-registered here):** **G5 (Level-2 re-derivation):** every committed `cert_probe`
+artifact re-derives its recorded `emitted_dafny_sha256` in stdlib-only code, and tampering
+with either the source or the recorded hash invalidates under `--re-derive` (exit 1) while
+leaving Level-1 behavior unchanged. **Verdict: PASS** (5/5).
+
+---
+
 ## 9. Why this is the industrial-revolutionary one
+
+*Status note: §10 (Phase-3 Level-2 re-deriver) now sits after §9 — the productization pitch
+above is unchanged; §10 is the deeper honesty upgrade that makes the certificate verifiable
+end-to-end by a third party with no Ward code at all.*
 
 Verification is a *process*; certificates are a *market*. Every AI coding tool in 2026 can
 claim "we verify." None ships a format that lets a third party check the claim without the

@@ -42,6 +42,21 @@ class TranspileError(Exception):
 
 _TRUST_RE = r'(?m)^[ \t]*trust[ \t]*:[ \t]*"([^"]*)"[ \t]*$'
 
+# Phase-2 toolchain annotations (ward-core tiers/effects/deps, weeks 3-5) are
+# NOT ward0 syntax: the ward0 surface grammar has no tokens for them, exactly
+# like `trust:`. The typed pipeline (wardcore elaborator) consumes them; the
+# Phase-0/1 transpiler must strip them too so the same annotated reference
+# sources work on both paths. These are no-ops on the E1 corpus (the 70
+# references declare no annotations), so byte-parity is untouched.
+_TIER_RE = r'(?m)^[ \t]*tier[ \t]*:[ \t]*(Proven|Contracted|Tested)[ \t]*$'
+_EFFECT_RE = r'(?m)^[ \t]*effect[ \t]*:[ \t]*(net|db|fs|mut|partial)[ \t]*$'
+_EFFECTS_RE = r'(?m)^[ \t]*effects[ \t]*:[ \t]*([^\r\n]+?)[ \t]*$'
+_DEP_RE = r'(?m)^[ \t]*dep[ \t]*:[ \t]*([A-Za-z_][A-Za-z0-9_-]*)@([^\s\r\n]+?)[ \t]*$'
+# T7 (week 6): `linear: name` on an extern def marks its capability param.
+_LINEAR_RE = r'(?m)^[ \t]*linear[ \t]*:[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*$'
+
+_ANNOTATION_RES = (_TRUST_RE, _TIER_RE, _EFFECT_RE, _EFFECTS_RE, _DEP_RE, _LINEAR_RE)
+
 
 class Ward0Transpiler:
     def __init__(self, grammar_path: Path = GRAMMAR_PATH, enforce_boundary: bool = False):
@@ -53,16 +68,24 @@ class Ward0Transpiler:
 
     # ---------------------------------------------------------------- public
 
-    def _strip_trusts(self, source: str) -> tuple[str, list[tuple[str, str]]]:
-        """Pull `trust: "..."` lines (toolchain annotations, not ward0 syntax)."""
+    def _strip_annotations(self, source: str) -> tuple[str, list[tuple[str, str]]]:
+        """Pull toolchain annotation lines out of ward0 source (not ward0 syntax).
+
+        Strips `trust:`, `tier:`, `effect:`, `effects:` and `dep:` lines — the
+        same annotation set the ward-core elaborator consumes — so annotated
+        multi-function references work on both the Phase-0/1 transpiler path
+        and the typed pipeline. Returns the cleaned source + the trust pairs
+        (the only annotation the transpiler itself acts on)."""
         import re
 
         pairs = re.findall(_TRUST_RE, source)
-        cleaned = re.sub(_TRUST_RE, "", source)
+        cleaned = source
+        for r in _ANNOTATION_RES:
+            cleaned = re.sub(r, "", cleaned)
         return cleaned, pairs
 
     def transpile(self, source: str) -> str:
-        cleaned, trusts = self._strip_trusts(source)
+        cleaned, trusts = self._strip_annotations(source)
         tree = self.parser.parse(cleaned)
         file_node = tree.children[0]
         defs = [

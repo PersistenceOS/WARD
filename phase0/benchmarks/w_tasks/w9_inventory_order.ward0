@@ -1,0 +1,55 @@
+// W9 inventory + order - reference module (multi-function: entry + helpers)
+// per-fn tiers: place_order Proven, check_stock Proven, reserve_inventory Contracted
+tier: Proven
+effects: db, fs
+fn place_order(item: int, qty: int) -> Result<int, str>
+  requires item > 0
+  requires qty > 0
+  ensures is_ok(result) == (item < 1000 and qty <= 20)
+  ensures (not is_ok(result)) or unwrap_ok(result) == qty
+{
+    var s: Result<int, str> = check_stock(item, qty);
+    if is_err(s) {
+        return Err(unwrap_err(s));
+    }
+    var r: Result<Unit, str> = reserve_inventory(item, qty);
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    return Ok(unwrap_ok(s));
+}
+
+tier: Proven
+effects: db
+fn check_stock(item: int, qty: int) -> Result<int, str>
+  requires item > 0
+  requires qty > 0
+  ensures is_ok(result) == (item < 1000)
+  ensures (not is_ok(result)) or unwrap_ok(result) == qty
+{
+    var s: Result<int, str> = stock_check(item, qty);
+    if is_ok(s) != (item < 1000) {
+        return Err("contract violation");
+    }
+    if is_err(s) {
+        return Err(unwrap_err(s));
+    }
+    return Ok(unwrap_ok(s));
+}
+
+tier: Contracted
+effects: fs
+fn reserve_inventory(item: int, qty: int) -> Result<Unit, str>
+  requires item > 0
+  requires qty > 0
+  ensures is_ok(result) == (qty <= 20)
+{
+    var r: Result<Unit, str> = inventory_reserve(item, qty);
+    if is_ok(r) != (qty <= 20) {
+        return Err("contract violation");
+    }
+    if is_err(r) {
+        return Err(unwrap_err(r));
+    }
+    return Ok(unwrap_ok(r));
+}

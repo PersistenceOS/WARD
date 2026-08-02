@@ -1,0 +1,65 @@
+{
+  "id": "w10_session_ledger",
+  "buggy": true,
+  "arm_kind": "w",
+  "fn": "session_transfer",
+  "tiers": {
+    "session_transfer": "Contracted",
+    "auth_session": "Proven",
+    "ledger_move": "Proven"
+  },
+  "effects": {
+    "session_transfer": ["net", "db"],
+    "auth_session": ["net"],
+    "ledger_move": ["db"]
+  },
+  "deps": [
+    "session@^3.0.0",
+    "ledger@^2.0.0"
+  ],
+  "spec": "Implement `session_transfer`: a transfer requires a valid session (the user must be known and the one-time code correct), then the ledger debits the source account when funds suffice, returning the new balance as Ok(new_balance); otherwise it returns Err(\"insufficient funds\"). The session service validates the one-time code for known users (user ids below 1000, otp equal to 123456); the ledger debits amounts up to the balance. The caller must detect when a service's actual behavior contradicts its documented contract and return Err(\"contract violation\").",
+  "externs": [
+    {
+      "name": "session_validate",
+      "params": [["user_id", "int"], ["otp", "int"]],
+      "ret": "Result<Unit, str>",
+      "contract": "requires user_id > 0\nrequires otp >= 0\nensures is_ok(result) == (user_id < 1000 and otp == 123456)",
+      "effect": "net",
+      "dep": "session@3.1.0",
+      "impl": "def session_validate_stub(user_id, otp):\n    if otp != 123456:\n        return (\"err\", \"bad otp\")\n    if user_id < 1100:\n        return (\"ok\", None)\n    return (\"err\", \"unauthorized\")\n",
+      "contract_py": "lambda user_id, otp, out: (out[0] == 'ok') == (user_id < 1000 and otp == 123456)",
+      "violation_probes": [
+        {"in": [500, 123456], "violation": false},
+        {"in": [1050, 123456], "violation": true},
+        {"in": [1500, 123456], "violation": false},
+        {"in": [500, 999999], "violation": false}
+      ]
+    },
+    {
+      "name": "ledger_debit",
+      "params": [["balance", "int"], ["amount", "int"]],
+      "ret": "Result<int, str>",
+      "contract": "requires balance >= 0\nrequires amount >= 0\nensures is_ok(result) == (amount <= balance)\nensures (not is_ok(result)) or unwrap_ok(result) == balance - amount",
+      "effect": "db",
+      "dep": "ledger@2.4.1",
+      "impl": "def ledger_debit_stub(balance, amount):\n    if amount <= balance + 20:\n        return (\"ok\", balance - amount)\n    return (\"err\", \"insufficient funds\")\n",
+      "contract_py": "lambda balance, amount, out: (out[0] == 'ok') == (amount <= balance)",
+      "violation_probes": [
+        {"in": [1000, 100], "violation": false},
+        {"in": [1000, 1010], "violation": true},
+        {"in": [1000, 1500], "violation": false}
+      ]
+    }
+  ],
+  "extern_dafny": "datatype Result<T, E> = Ok(value: T) | Err(error: E)\n\nmethod {:extern}{:axiom} session_validate(user_id: int, otp: int) returns (result: Result<(), string>)\n  requires user_id > 0\n  requires otp >= 0\n  ensures result.Ok? == (user_id < 1000 && otp == 123456)\n\nmethod {:extern}{:axiom} ledger_debit(balance: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok? == (amount <= balance)\n  ensures !result.Ok? || result.value == balance - amount",
+  "reference_dafny_caller": "method session_transfer(user_id: int, otp: int, balance: int, amount: int) returns (result: Result<int, string>)\n  requires user_id > 0\n  requires otp >= 0\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok? == (user_id < 1000 && otp == 123456 && amount <= balance)\n{\n  var a := auth_session(user_id, otp);\n  if !a.Ok? {\n    result := Err(a.error);\n    return;\n  }\n  var d := ledger_move(balance, amount);\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  result := Ok(d.value);\n}\n\nmethod auth_session(user_id: int, otp: int) returns (result: Result<(), string>)\n  requires user_id > 0\n  requires otp >= 0\n  ensures result.Ok? == (user_id < 1000 && otp == 123456)\n{\n  var a := session_validate(user_id, otp);\n  if a.Ok? != (user_id < 1000 && otp == 123456) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !a.Ok? {\n    result := Err(a.error);\n    return;\n  }\n  result := Ok(());\n}\n\nmethod ledger_move(balance: int, amount: int) returns (result: Result<int, string>)\n  requires balance >= 0\n  requires amount >= 0\n  ensures result.Ok? == (amount <= balance)\n  ensures !result.Ok? || result.value == balance - amount\n{\n  var d := ledger_debit(balance, amount);\n  if d.Ok? != (amount <= balance) {\n    result := Err(\"contract violation\");\n    return;\n  }\n  if !d.Ok? {\n    result := Err(d.error);\n    return;\n  }\n  result := Ok(d.value);\n}",
+  "hidden_tests": [
+    {"in": [500, 123456, 1000, 100], "out": {"ok": 900}},
+    {"in": [500, 123456, 1000, 1000], "out": {"ok": 0}},
+    {"in": [1050, 123456, 1000, 100], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [1500, 123456, 1000, 100], "out": {"err": "unauthorized"}},
+    {"in": [500, 999999, 1000, 100], "out": {"err": "bad otp"}},
+    {"in": [500, 123456, 1000, 1010], "out": {"err": "contract violation"}, "violation": true},
+    {"in": [500, 123456, 1000, 1500], "out": {"err": "insufficient funds"}}
+  ]
+}
