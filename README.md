@@ -2,7 +2,9 @@
 
 # 🛡️ WARD
 
-### The language that makes the dangerous kind of AI code slop impossible to ship
+**Ward AI slop.**
+
+### A verification language for AI-written full-stack software
 
 **Write code. Write a promise. The computer proves the promise.**
 
