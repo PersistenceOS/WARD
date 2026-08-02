@@ -8,6 +8,8 @@
 
 **Write code. Write a promise. The computer proves the promise.**
 
+*WARD — Why Another Rust Derivative? It isn't. It's the language that wards off AI slop.*
+
 Ward is a Python/TypeScript-shaped language in which every function carries a contract (`requires` / `ensures`). A deterministic toolchain proves the contract with an SMT-backed verifier (today: `ward0` → Dafny + Z3). *"Compiles" means "provably satisfies its stated contract" — not "type-checks and looks plausible."*
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
