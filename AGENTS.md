@@ -12,25 +12,30 @@ code that looks right, passes tests, and is subtly wrong.
 
 ## Quick start
 
+After `ward.py setup`, a global `ward` command works from any terminal and any
+project directory:
+
 ```bash
 # verify a ward0 file (elaborate -> prove -> diagnose)
-python ward.py check path/to/file.ward0
+ward check path/to/file.ward0
 
 # machine-readable output (for agents)
-python ward.py check path/to/file.ward0 --json
+ward check path/to/file.ward0 --json
 
 # add extern contract-check wrappers (boundary enforcement)
-python ward.py check path/to/file.ward0 --enforce
+ward check path/to/file.ward0 --enforce
 
 # emit a .proof certificate (checkable standalone, no Dafny/Z3)
-python ward.py proof path/to/file.ward0
+ward proof path/to/file.ward0
+
+# diagnose the install: which checkout `ward` uses, repo.txt, venv, toolchain, integrations
+ward doctor
 ```
 
-Use the repo venv's python so `lark` is available:
-- Windows: `phase0/.venv/Scripts/python`
-- POSIX: `phase0/.venv/bin/python`
-
-Requires `dafny` 4.11 + `z3` 4.12 on PATH for live verification.
+From inside the repo you can also call the CLI directly with the venv python
+(`phase0/.venv/Scripts/python` on Windows, `phase0/.venv/bin/python` on POSIX)
+— `python ward.py check …` is identical. Requires `dafny` 4.11 + `z3` 4.12 on
+PATH for live verification.
 
 ## The language in 60 seconds
 

@@ -8,7 +8,11 @@ venv/
 .mypy_cache/
 
 # ── .NET / Dafny build artifacts ────────────────
-bin/
+# bin/* ignores build output but the repo ships source launchers there:
+# bin/ward (POSIX) and bin/ward.cmd (Windows) — re-include them explicitly.
+bin/*
+!bin/ward
+!bin/ward.cmd
 obj/
 *.deps.json
 *.pdb

@@ -310,7 +310,7 @@ curl -fsSL https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.sh 
 iex (irm https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.ps1)
 ```
 
-This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `phase0/.venv`, installs `lark` (+ `z3-solver` for the standalone z3 backend — non-fatal if it fails), runs `ward.py setup`, and prints a ready-check. Dafny + Z3 are *checked*, not installed — see the note at the end.
+This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `phase0/.venv`, installs `lark` (+ `z3-solver` for the standalone z3 backend — non-fatal if it fails), runs `ward.py setup`, and prints a ready-check. Setup leaves a global `ward` command on your PATH, so everything below works from any terminal. Dafny + Z3 are *checked*, not installed — see the note at the end.
 
 ### One-command setup (from the repo)
 
@@ -319,6 +319,28 @@ python ward.py setup                # install skill + rule + auto-verify hook gl
 python ward.py setup --create-venv  # also create phase0/.venv + install lark and z3-solver if missing
 python ward.py setup --dry-run      # show what it would do, write nothing
 ```
+
+### Then: `ward` works from any terminal
+
+Setup also installs a global **`ward` command** into `~/.ward/bin` (added to
+your PATH) — a thin launcher that resolves the WARD checkout and delegates to
+its venv python. From that point on, the CLI works in *any* directory, in *any*
+project:
+
+```bash
+ward setup                        # same setup, from anywhere — idempotent, safe to re-run
+ward check your_file.ward0        # elaborate + prove + diagnose
+ward check your_file.ward0 --json # machine-readable (agents)
+ward proof your_file.ward0        # emit a .proof certificate
+ward doctor                       # diagnose: which checkout `ward` uses, repo.txt, venv, toolchain, integrations
+```
+
+It finds the checkout via `$WARD_HOME` → the checkout you installed from
+(recorded in `~/.ward/repo.txt`) → its own repo → `~/WARD`, so it uses your
+real dev checkout even if an older `~/WARD` clone from the one-line installer
+exists — and moving your checkout doesn't break it. (New terminals pick up
+the PATH change; if `ward` isn't found, start a fresh terminal or re-run
+`python ward.py setup`.)
 
 ### Auto-verify as you write (Claude Code)
 
@@ -351,12 +373,13 @@ Confirm it's active by checking `~/.claude/settings.json` for the WARD
 ### Quick check (any tool)
 
 ```bash
-# Windows venv:
-phase0/.venv/Scripts/python ward.py check your_file.ward0
-# POSIX:
-phase0/.venv/bin/python ward.py check your_file.ward0
+# any terminal, after setup — the global command:
+ward check your_file.ward0
+# from inside the repo — direct venv call:
+phase0/.venv/Scripts/python ward.py check your_file.ward0   # Windows
+phase0/.venv/bin/python ward.py check your_file.ward0       # POSIX
 # machine-readable (agents):
-phase0/.venv/Scripts/python ward.py check your_file.ward0 --json
+ward check your_file.ward0 --json
 ```
 
 ### Claude Code

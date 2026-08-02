@@ -7,8 +7,27 @@ One command to verify ward0 code from any terminal or AI agent
     python ward.py check path/to/file.ward0      # transpile + prove + diagnose
     python ward.py emit  path/to/file.ward0      # transpile to Dafny only
     python ward.py proof path/to/file.ward0      # emit a .proof certificate
+    python ward.py doctor                        # diagnose the install: which
+                                                 # checkout `ward` resolves to,
+                                                 # repo.txt, venv, toolchain,
+                                                 # integrations
     python ward.py setup                         # install the Claude Code skill +
-                                                 # Cursor rule globally; check venv + toolchain
+                                                 # Cursor rule + a global `ward`
+                                                 # command; check venv + toolchain
+
+After `ward.py setup`, a global `ward` command (from bin/ward / bin/ward.cmd)
+is installed into ~/.ward/bin and added to PATH, so the CLI works from ANY
+terminal and ANY project directory:
+
+    ward setup
+    ward check path/to/file.ward0
+    ward proof path/to/file.ward0
+    ward doctor
+
+It resolves the WARD checkout via $WARD_HOME > ~/.ward/repo.txt > its own
+repo > ~/WARD, then delegates to the venv python — no cd-ing into the repo
+needed. `ward doctor` prints the resolution and integration state so 'why is
+ward using that copy?' is answerable in one command.
 
 `check` is the important one. It runs the real toolchain:
     1. elaborate (ward0 surface -> ward-core IR -> Dafny 4)
@@ -140,6 +159,79 @@ def _run_check(source: str, enforce: bool, emit: bool, verify_limit: int | None)
     report["exit"] = 0 if ok else 1
     report["ok"] = bool(ok)
     return report
+
+
+def _add_user_path_entry(entry: str, platform: str | None = None) -> None:
+    """Append `entry` to the user PATH, idempotently.
+
+    Windows: reads/appends HKCU\\Environment\\Path via winreg (no setx
+    1024-char truncation trap; the %USERPROFILE%-expanded form is stored, not
+    the raw literal). POSIX: appends `export PATH=...` to ~/.bashrc /
+    ~/.zshrc when the entry is absent (creating ~/.bashrc if neither rc file
+    exists, so the command is actually reachable). Never duplicates; never
+    touches the system PATH. Raises OSError on failure (caller reports it as a
+    non-fatal setup problem).
+    """
+    plat = platform or sys.platform
+    if plat == "win32":
+        import winreg
+
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0,
+                             winreg.KEY_SET_VALUE | winreg.KEY_QUERY_VALUE)
+        try:
+            current, _typ = winreg.QueryValueEx(key, "Path")
+        except FileNotFoundError:
+            current = ""
+        parts = [p for p in current.split(";") if p]
+        if entry not in parts:
+            parts.append(entry)
+            winreg.SetValueEx(key, "Path", 0, winreg.REG_EXPAND_SZ, ";".join(parts))
+        winreg.CloseKey(key)
+        return
+    # POSIX: append an export line to the first existing rc file that lacks it.
+    # If neither rc exists, create ~/.bashrc so the command is reachable at all.
+    line = f'\nexport PATH="{entry}:$PATH"  # ward global command\n'
+    for rc in (Path.home() / ".bashrc", Path.home() / ".zshrc"):
+        if rc.is_file():
+            text = rc.read_text(encoding="utf-8", errors="replace")
+            if entry not in text:
+                with rc.open("a", encoding="utf-8") as fh:
+                    fh.write(line)
+            return
+    (Path.home() / ".bashrc").write_text(line, encoding="utf-8")
+
+
+def _install_global_command(repo: Path, home: Path, dry_run: bool) -> tuple[bool, str]:
+    """Install bin/ward (or bin/ward.cmd) into ~/.ward/bin and add it to PATH.
+
+    Returns (ok, message). Idempotent: re-running setup refreshes the launcher
+    and the PATH entry is de-duplicated. The launcher itself resolves the
+    checkout at runtime ($WARD_HOME > its own repo > ~/WARD), so moving the
+    repo doesn't break the command.
+    """
+    import shutil
+
+    launcher = repo / "bin" / ("ward.cmd" if sys.platform == "win32" else "ward")
+    if not launcher.is_file():
+        return False, f"launcher source missing: {launcher}"
+    bin_dir = home / ".ward" / "bin"
+    dst = bin_dir / launcher.name
+    if dry_run:
+        return True, f"(dry-run) would install {dst} + add {bin_dir} to PATH"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(launcher, dst)
+    if sys.platform != "win32":
+        # copy2 preserves the SOURCE file's mode — the repo copy may have no
+        # exec bit (git on Windows doesn't track it), so force 755 so the
+        # installed launcher is directly executable.
+        import os
+
+        os.chmod(dst, 0o755)
+    # Record which checkout setup ran from, so the installed launcher prefers
+    # THIS repo over a stale ~/WARD clone left by the one-line installer.
+    (home / ".ward" / "repo.txt").write_text(str(repo), encoding="utf-8")
+    _add_user_path_entry(str(bin_dir))
+    return True, f"global `ward` command -> {dst}"
 
 
 def _merge_ward_hook(settings_path: Path, command: str) -> None:
@@ -319,6 +411,22 @@ def _cmd_setup(args) -> int:
         problems.append(f"hook source missing: {hook_src}")
         status(False, "Claude Code auto-verify hook (source missing: ward_hook.py)")
 
+    # ---- global `ward` command: ~/.ward/bin + PATH ----
+    # The launcher makes the CLI usable from any terminal / any project dir,
+    # so `ward setup` and `ward check` work without cd-ing into a checkout.
+    if args.dry_run:
+        ok, msg = _install_global_command(repo, home, dry_run=True)
+        status(ok, msg)
+    else:
+        try:
+            ok, msg = _install_global_command(repo, home, dry_run=False)
+            status(ok, msg)
+            if not ok:
+                problems.append(f"global command: {msg}")
+        except OSError as exc:
+            problems.append(f"global command install: {exc}")
+            status(False, f"global `ward` command ({exc})")
+
     # ---- toolchain check ----
     dafny = shutil.which("dafny")
     z3 = shutil.which("z3")
@@ -336,14 +444,156 @@ def _cmd_setup(args) -> int:
         print("WARD skills installed; notes:")
         for p in problems:
             print(f"  - {p}")
-        print("  Fix the above, then re-run `python ward.py setup`.")
+        print("  Fix the above, then re-run `ward setup` (or `python ward.py setup`).")
         return 1
-    print("✓ You're ready. In any AI tool:")
+    print("✓ You're ready. From any terminal (your_file.ward0 = a real path):")
+    print("    ward check your_file.ward0    the global command — works in any directory")
+    print("    ward proof your_file.ward0    emit a .proof certificate")
+    print("    ward setup                    re-run any time to refresh")
+    print("  Note: `your_file.ward0` is a placeholder — substitute a real path, e.g.")
+    print("   `ward check C:\\path\\to\\file.ward0`.")
+    print("  In any AI tool:")
     print("    Claude Code    ask to 'verify this with ward' — the skill auto-loads.")
     print("    Cursor         the rule auto-applies to .ward0 files.")
     print("    OpenCode/Cline AGENTS.md in the repo teaches the agent automatically.")
-    print("    VS Code        run the CLI from the terminal, or add the README task:")
-    print(f"                     {venv_py} ward.py check <file>.ward0")
+    print("    VS Code        the LSP squiggles on save (see README 'Wire up'), or:")
+    print(f"                     {venv_py} ward.py check your_file.ward0")
+    return 0
+
+
+def _cmd_doctor(args) -> int:
+    """Diagnose the WARD install — one command to answer 'why is ward using
+    that copy?' forever.
+
+    Prints, with the same resolution order the launchers use
+    ($WARD_HOME > ~/.ward/repo.txt > its own repo > ~/WARD):
+      - which checkout the `ward` launcher resolves to, and whether it differs
+        from this CLI's own repo (the stale-clone-shadowing case)
+      - ~/.ward/repo.txt contents (the recorded install source)
+      - venv python presence, dafny + z3 on PATH
+      - global `ward` launcher, Claude Code skill + auto-verify hook, Cursor
+        rule install state
+
+    Exit 0 = all healthy; 1 = at least one problem found (reports them).
+    """
+    import os
+    import shutil
+
+    repo = Path(__file__).resolve().parent
+    home = Path.home()
+    problems: list[str] = []
+
+    def status(ok: bool, msg: str) -> None:
+        print(f"  {'✓' if ok else '✗'} {msg}")
+
+    print("ward doctor")
+
+    # ---- checkout resolution (same order as bin/ward / bin/ward.cmd) ----
+    print("  checkout — what the `ward` launcher resolves to (same order as the launchers):")
+    candidates: list[tuple[str, Path]] = []
+    env_home = os.environ.get("WARD_HOME")
+    if env_home:
+        candidates.append(("$WARD_HOME", Path(env_home)))
+    repo_txt = home / ".ward" / "repo.txt"
+    if repo_txt.is_file():
+        try:
+            raw = repo_txt.read_text(encoding="utf-8").strip().splitlines()
+            candidates.append(("~/.ward/repo.txt", Path(raw[0]) if raw else Path()))
+        except OSError as exc:
+            candidates.append((f"~/.ward/repo.txt (unreadable: {exc})", Path()))
+    candidates.append(("own repo (dev layout — only when run from inside a checkout)", repo))
+    candidates.append(("~/WARD", home / "WARD"))
+    resolved: Path | None = None
+    for label, p in candidates:
+        ok = bool(p) and (p / "ward.py").is_file()
+        status(ok, f"{label} -> {p}")
+        if ok and resolved is None:
+            resolved = p
+    if resolved is None:
+        print("  ✗ no usable checkout found — run `ward setup` or set $WARD_HOME")
+        problems.append("no usable checkout found")
+    elif resolved != repo:
+        print(f"  ⚠ `ward` resolves to {resolved}, but this CLI lives in {repo}")
+        print("    (stale clone shadowing the dev checkout? re-run `ward setup` from")
+        print("    the checkout you want, or set $WARD_HOME to pin it.)")
+        problems.append("launcher resolves to a different checkout than this CLI")
+    else:
+        print(f"  ✓ `ward` uses this checkout: {repo}")
+
+    # ---- repo.txt ----
+    print(f"  ~/.ward/repo.txt (recorded install source):")
+    if repo_txt.is_file():
+        try:
+            content = repo_txt.read_text(encoding="utf-8").strip()
+            target = Path(content) if content else Path()
+            ok = bool(target) and (target / "ward.py").is_file()
+            status(ok, content or "(empty)")
+            if not ok:
+                problems.append("repo.txt points at a checkout without ward.py (stale)")
+        except OSError as exc:
+            status(False, f"unreadable: {exc}")
+            problems.append(f"repo.txt unreadable: {exc}")
+    else:
+        status(False, "(missing — run `ward setup` to record the install source)")
+        problems.append("repo.txt missing")
+
+    # ---- venv + toolchain ----
+    if sys.platform == "win32":
+        venv_py = repo / "phase0" / ".venv" / "Scripts" / "python.exe"
+    else:
+        venv_py = repo / "phase0" / ".venv" / "bin" / "python"
+    status(venv_py.is_file(), f"venv python: {venv_py}")
+    if not venv_py.is_file():
+        problems.append("phase0 venv missing (run `ward setup --create-venv`)")
+    dafny = shutil.which("dafny")
+    z3 = shutil.which("z3")
+    status(bool(dafny), "dafny on PATH" if dafny else "dafny on PATH (needed for live verification)")
+    status(bool(z3), "z3 on PATH" if z3 else "z3 on PATH (needed for live verification)")
+    if not (dafny and z3):
+        problems.append("dafny/z3 not both on PATH — live verification needs both")
+
+    # ---- global launcher ----
+    launcher = home / ".ward" / "bin" / ("ward.cmd" if sys.platform == "win32" else "ward")
+    status(launcher.is_file(), f"global `ward` launcher: {launcher}")
+    if not launcher.is_file():
+        problems.append("global `ward` launcher not installed (run `ward setup`)")
+
+    # ---- agent integrations ----
+    skill = home / ".claude" / "skills" / "ward" / "SKILL.md"
+    status(skill.is_file(), f"Claude Code skill: {skill}")
+    if not skill.is_file():
+        problems.append("Claude Code skill missing (run `ward setup`)")
+    settings = home / ".claude" / "settings.json"
+    hook_ok = False
+    if settings.is_file():
+        try:
+            data = json.loads(settings.read_text(encoding="utf-8"))
+            hooks = data.get("hooks", {})
+            hook_ok = any(
+                "ward_hook.py" in str(h)
+                for ev in ("PreToolUse", "PostToolUse")
+                for e in hooks.get(ev, [])
+                for h in e.get("hooks", [])
+            )
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            hook_ok = False
+    status(hook_ok, f"Claude Code auto-verify hook in {settings}")
+    if not hook_ok:
+        problems.append("Claude Code auto-verify hook not installed (run `ward setup`)")
+    cursor = home / ".cursor" / "rules" / "ward.mdc"
+    status(cursor.is_file(), f"Cursor rule: {cursor}")
+    if not cursor.is_file():
+        problems.append("Cursor rule missing (run `ward setup`)")
+
+    # ---- summary ----
+    print()
+    if problems:
+        print("✗ issues found:")
+        for p in problems:
+            print(f"    - {p}")
+        print("  Run `ward setup` (or `python ward.py setup`) from the checkout you want.")
+        return 1
+    print("✓ All healthy.")
     return 0
 
 
@@ -406,6 +656,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--dry-run", action="store_true", help="show what would be done, without writing")
     s.add_argument("--create-venv", action="store_true", help="create phase0/.venv + install lark if missing")
 
+    d = sub.add_parser("doctor", help="diagnose the install: which checkout `ward` resolves to, repo.txt, venv, toolchain, integrations")
+
     e = sub.add_parser("emit", help="transpile a .ward0 file to Dafny only")
     e.add_argument("input")
     e.add_argument("--enforce", action="store_true")
@@ -418,8 +670,17 @@ def main(argv: list[str] | None = None) -> int:
 
     args = ap.parse_args(argv)
 
+    # Clean error for a missing input file — never a raw FileNotFoundError
+    # traceback (the old behavior dumped pathlib internals to the user).
+    if args.cmd in ("check", "emit", "proof") and not Path(args.input).is_file():
+        print(f"ward: no such file: {args.input}", file=sys.stderr)
+        return 2
+
     if args.cmd == "setup":
         return _cmd_setup(args)
+
+    if args.cmd == "doctor":
+        return _cmd_doctor(args)
 
     if args.cmd == "check":
         r = _run_check(_load_source(Path(args.input)), args.enforce,

@@ -38,20 +38,23 @@ dangerous kind of slop. WARD makes it **fail** at the checker, before it ships.
 
 ## How to invoke WARD
 
-The CLI lives at the repo root of the WARD checkout:
+After `ward.py setup`, a global `ward` command works from any terminal and any
+project directory (the launcher resolves the checkout via `$WARD_HOME` → the
+checkout you installed from in `~/.ward/repo.txt` → its own repo → `~/WARD`):
 
 ```bash
-# from the WARD repo
-python ward.py check path/to/file.ward0            # elaborate + prove + diagnose
-python ward.py check path/to/file.ward0 --json     # machine-readable (agents)
-python ward.py check path/to/file.ward0 --enforce  # add extern contract-check wrappers
-python ward.py emit  path/to/file.ward0            # just transpile to Dafny
-python ward.py proof path/to/file.ward0            # emit a .proof certificate
+ward check path/to/file.ward0            # elaborate + prove + diagnose
+ward check path/to/file.ward0 --json     # machine-readable (agents)
+ward check path/to/file.ward0 --enforce  # add extern contract-check wrappers
+ward emit  path/to/file.ward0            # just transpile to Dafny
+ward proof path/to/file.ward0            # emit a .proof certificate
+ward doctor                              # diagnose: which checkout, repo.txt, venv, toolchain, integrations
 ```
 
-Use the repo venv's python so `lark` is available (Windows:
-`phase0/.venv/Scripts/python`; POSIX: `phase0/.venv/bin/python`). Requires
-`dafny` 4.11 + `z3` 4.12 on PATH for live verification.
+From inside the repo you can also call the CLI directly with the venv python
+(Windows: `phase0/.venv/Scripts/python`; POSIX: `phase0/.venv/bin/python`) —
+`python ward.py check …` is the identical command. Requires `dafny` 4.11 +
+`z3` 4.12 on PATH for live verification.
 
 ## The ward0 subset (v0.1, strict)
 

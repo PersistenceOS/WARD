@@ -1,0 +1,70 @@
+#!/usr/bin/env sh
+# ward — global launcher for the WARD CLI.
+#
+# Installed by `ward.py setup` into ~/.ward/bin (added to PATH) so the CLI
+# works from ANY terminal, in ANY project:
+#
+#     ward setup                          # one-command setup, from anywhere
+#     ward check path/to/file.ward0       # elaborate + prove + diagnose
+#     ward proof path/to/file.ward0       # emit a .proof certificate
+#
+# Resolution order for the WARD checkout:
+#   1. $WARD_HOME                       (explicit override)
+#   2. ~/.ward/repo.txt                 (the checkout `ward setup` last ran
+#                                       from — beats a stale ~/WARD clone)
+#   3. this script's own repo           (dev layout: <repo>/bin/ward)
+#   4. ~/WARD                           (one-line installer's default dest)
+#
+# Then it prefers the repo venv python (has lark) and falls back to system
+# python, and execs ward.py so exit codes propagate to the caller.
+
+set -eu
+
+find_repo() {
+    if [ -n "${WARD_HOME:-}" ] && [ -f "$WARD_HOME/ward.py" ]; then
+        printf '%s' "$WARD_HOME"
+        return 0
+    fi
+    # the checkout setup last installed from — the source of truth when the
+    # user has both a dev checkout and an (older) one-line-installer clone
+    if [ -f "$HOME/.ward/repo.txt" ]; then
+        r=$(head -n1 "$HOME/.ward/repo.txt" 2>/dev/null || true)
+        if [ -n "$r" ] && [ -f "$r/ward.py" ]; then
+            printf '%s' "$r"
+            return 0
+        fi
+    fi
+    # walk up from this script's dir looking for a repo root (dev layout:
+    # bin/ward sits inside the checkout, one level below ward.py)
+    d=$(CDPATH= cd "$(dirname "$0")" && pwd)
+    while : ; do
+        if [ -f "$d/ward.py" ]; then
+            printf '%s' "$d"
+            return 0
+        fi
+        [ "$d" = "/" ] && break
+        d=$(dirname "$d")
+    done
+    if [ -f "$HOME/WARD/ward.py" ]; then
+        printf '%s' "$HOME/WARD"
+        return 0
+    fi
+    return 1
+}
+
+repo=$(find_repo) || {
+    echo "ward: could not find a WARD checkout." >&2
+    echo "  set WARD_HOME=<checkout dir>, or run the one-line installer:" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.sh | bash" >&2
+    exit 2
+}
+
+if [ -x "$repo/phase0/.venv/bin/python" ]; then
+    PY="$repo/phase0/.venv/bin/python"
+elif [ -x "$repo/phase0/.venv/Scripts/python.exe" ]; then
+    PY="$repo/phase0/.venv/Scripts/python.exe"
+else
+    PY=python3
+fi
+
+exec "$PY" "$repo/ward.py" "$@"
