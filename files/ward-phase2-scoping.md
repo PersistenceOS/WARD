@@ -556,3 +556,43 @@ cheap, solo-runnable — same posture as Phase 0/1.
   Level-1 — the standalone checker validates the artifact and the tier
   semantics; independent re-derivation is the Phase-3 standalone checker
   (`files/ward-certified-code.md` §4/§8).
+
+---
+
+## 10. Theory instruments — pre-registered probes (additive, Phase 2.5+)
+
+Four new measurement instruments, pre-registered here so the gates exist before
+any number is produced. **All four are additive — none touches the transpiler,
+the harness, the ward-core passes, or gates E1–E8.** Each converts something
+currently *asserted* into something *measured and gated*; each has a
+falsifiable gate and a pre-registered decision rule. Probes live in
+`phase0/experiments/`; this section is the pre-registration.
+
+| # | Instrument | Definition (brief) | Gate (pre-registered) | Decision rule |
+|---|---|---|---|---|
+| I1 | **Specification Tightness τ** — the anti-slop index | τ(x) = 1 − log₂\|Y_perm(x)\‖ / log₂\|Y‖, τ = E_{x∼P}[τ(x)] over a bounded input grid; measures the fraction of output entropy the contract pins down | τ computed on the 12 w-tasks + 62 Phase-0 tasks; Proven-tier oracle references report τ ≥ 0.5; vacuous specs (`ensures true`) report τ ≈ 0 | Probe result is a *measurement* (no GO/NO-GO on the corpus itself). The gate is on the instrument: τ must separate a deliberately vacuous control (τ ≈ 0) from a tight reference (τ ≈ 1) |
+| I2 | **Boundary Immunity theorem** — the trust boundary as a theorem | ∀ extern implementations e (even adversarial): ⟦W(M)⟧ ⊨ {P} (Q ∨ Err = contract-violation(e)); Err never corrupts core state; proved once in Dafny as a verified proof-transformer | A Dafny-verified generic lemma for the wrapper pattern (per-instance instances already verified via E1's 70/70 byte-identical corpus); the theorem's wrapper-transparency statement verifies | If the generic lemma verifies → theorem feasible, ship in the certificate (§I2 in `ward-certified-code.md`); if it does not go through quickly → document the obstruction, park it as a Phase-3 item (stretch gate, same posture as E9: scope-cut, not halt) |
+| I3 | **Verification-Load Index** — token cost forecast *before* the loop | E[N] ≈ exp(β·v), v = (quantifier depth, loop-invariant count, nonlinear ops, array-bound complexity, extern count) from the VC | Fit on existing measured attempt data (Phase-1 w-task runs); held-out tasks: predicted E[N] within 2× of measured | If the 2× gate fails → report the honest negative result (index does not predict on this corpus); feature set revision is the follow-up, not a halt |
+| I4 | **Guide Saturation** — the optimal guide length law | p(G) = p_max·(1 − e^(−G/G₀)); T(G) ≈ (G + E[output])/p(G) has a unique optimum G\* | p(G) measured at ≥ 4 guide lengths on a fixed task set; fitted curve; falsifiable: marginal tokens beyond G\* add ≈ 0 success probability | **Requires live LLM runs (real token spend) — explicitly held until spend is approved.** Pre-registered design + gate only |
+
+**Shared discipline:** every number these instruments produce is a measurement
+with its sampling/domain explicitly reported; nothing is claimed beyond the
+bounded domain it was measured on. Status of each instrument is tracked here as
+probes land (τ / VLI / Boundary Immunity = fast, no spend; Guide Saturation =
+blocked on spend approval).
+
+### Probe results (2026-08-01, zero spend)
+
+| # | Instrument | Measured result | Verdict |
+|---|---|---|---|
+| I1 | Specification Tightness τ | **Calibrated on the full corpus (2026-08-01):** 41/74 tasks measured (33 unevaluable: quantifiers/len/str-rets — honest bounded-domain limit), mean τ = 0.575, median 0.578, min 0.000, max 1.000; vacuous control (ensures true) scores **0.0** — the instrument separates. Reference-Proven floor 0.234 (w7). **τ₀ decision (pre-registered): TAU0 = 0.2** — above vacuous, below the reference-Proven floor, so every gold-standard Proven spec keeps its tier; the midpoint 0.5 was rejected because it demotes 3/12 reference Proven specs (w5/w7/w12 pin is_ok but not the value). Gate runner: `python -m wardcore.tightness_gate` (82 fns, 0 demotions at 0.2; 3 demotions at strict 0.5) | **Works — gate built** (wardcore/tightness_gate.py + 13 tests; additive, no pipeline change) |
+| I2 | Boundary Immunity | Dafny verifies 5/5 on the **full ∀-extern metatheorem** (`boundary_immunity_metatheorem.dfy`): generic over any extern contract C and any core guarantee Q — `Wrap_C(r) == Err("contract violation") ∨ Q(Wrap_C(r))` given `∀rr. C(x,rr) ⇒ Q(rr)`; lemmas WrapConforming/WrapViolating/BoundaryImmunityMetatheorem/Corollary + generic CallerGeneric all verify | **Proven — the theorem is generic (one proof for all programs), not per-instance** |
+| I3 | Verification-Load Index | 70 tasks (62 t + 8 w), features have real variance on t-tasks; LOO 70/70 within 2× BUT median ratio 1.04 — E[N] is near-constant (1.00–1.80), so the 2× gate is trivially satisfied; verify_s leg: only 8 w-tasks have it (singular fit), per-feature corr: nonlinear_ops +0.699, externs −0.519 | **Inconclusive, honestly**: the corpus's attempt variance is too small to validate the index; needs the harder E7 oracle set (oracle verify ≥ 5 s floor) or real-model runs |
+| I4 | Guide Saturation | 2-point p(G) from existing W/D arms (same 8 w-tasks): p(406 words) = 0.750, p(149 words) = 0.750 — FLAT; E[N] W 1.12 vs D 1.62; saturation curve unidentifiable from two equal points (G0 → ∞); content confound (ward0 vs raw Dafny guides differ in language, not only length) | **Not testable without spend** — the pre-registered ≥ 4-length controlled sweep (same guide content, varying length) is the required test and remains spend-gated |
+
+**Standing conclusions (from the probes, pre-registered as such):**
+- τ and Boundary Immunity are the two instruments worth implementing (measured /
+  proven, zero spend). VLI and Guide Saturation are not failures — they are
+  *data-limited*: VLI needs harder oracles, Guide Saturation needs controlled
+  multi-length runs (spend). No pipeline file (transpiler / harness /
+  ward-core passes / E1–E8 gates) was modified by any probe.
