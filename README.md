@@ -125,6 +125,21 @@ Toolchain: **57/57 suites green** (grammar 20/20, transpiler 24/24, harness 13/1
 
 **Verdict:** the surface-syntax-superiority claim is dropped; the boundary + tiered-verification thesis is validated and is the path forward.
 
+### Phase 1 — token economics (measured, small sample)
+
+**Verification itself costs 0 model tokens** — Dafny + Z3 are deterministic local tools, not an LLM. The only token spend is what the model writes and how many times it retries. Same 8 tasks, same harness, measured on Phase-1 arms W vs D (tokens ≈ chars ÷ 4):
+
+| | W (ward0) | D (raw dafny) |
+|---|---|---|
+| Attempts (8 tasks) | 9 (1 extra) | 13 (5 extra) |
+| Solved | **8/8** | 6/8 |
+| Guide tokens | 5,661 (9×629) | 2,808 (13×216) |
+| Output tokens | 1,143 | 2,691 |
+| **Total** | 6,804 | 5,499 |
+| **Tokens per solved task** | **850** | 916 |
+
+Read honestly: Ward pays an up-front premium — a 629-token guide (vs. Dafny's 216) is re-sent on every attempt — and buys it back with fewer attempts: **per correct result, Ward is 7% cheaper (850 vs 916)**, and it delivered 8/8 where raw Dafny delivered 6/8. The guide is a fixed constant: it dominates tiny tasks (83% of Ward's spend here) and shrinks to noise on real programs, where the attempt savings dominate. To get 8 correct results at D's rate would take ~10.7 tasks ≈ 7,330 tokens — the same outcome, Ward is cheaper. The honest asterisk: if verification doesn't converge (weak loop invariants), attempts — and re-sent guide tokens — compound. That ceiling is exactly what the tiered design (Tested → Contracted → Proven) is built to bound.
+
 ## Roadmap
 
 | Phase | Status | Scope |
