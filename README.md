@@ -75,6 +75,42 @@ If the code breaks its promise, WARD says so — naming the exact line, the exac
 3. **Model repairs** against the error and retries — checker-guided convergence.
 4. **Anti-slop layer:** an instrument measures how *specific* each promise is, so the model can't satisfy the checker with `ensures true` (the scientific core — next section).
 
+### What this changes for you — the human in the loop
+
+Without a checker, AI code is judged by eye: you read the diff, hope the tests the *same model* wrote are right, and ship. WARD moves the acceptance test from your eyeballs to a machine:
+
+| Without WARD | With WARD |
+|---|---|
+| You prompt in prose: *"handle insufficient funds and return the new balance"* | You write the contract once: `ensures is_ok(result) == (amount <= balance)` — the model implements against a checkable spec |
+| The model's tests were written by the same model — they agree with the same bug | The verifier is independent; a wrong `Ok` fails with a named counterexample (`amount=110, balance=100`) |
+| Edge cases live in your head — or get cut when the model gets lazy | Edges are *stated* in `requires` / `ensures` and *proven* — the model can't skip them |
+| You review every repaired attempt to tell good from bad | The repair loop is checker-guided: `(location, obligation, counterexample)` → model fixes → re-verify until ✓ |
+| A subtle bug costs an incident, later | A subtle bug costs one failed verification, now |
+
+**Prompt-wise, your prompt gets shorter and sharper.** You don't have to enumerate every edge case in the prompt or argue the model into handling them — you declare the contract, and the checker enforces it on every attempt. The model can still write sloppy code; WARD just makes sure sloppiness *fails* instead of *shipping*.
+
+### Where it bites: example use cases
+
+Three scenarios from the repo's own benchmark corpus (all measured, Phase 1):
+
+**1. A two-account ledger — a bank that approves overdrafts.** `ledger_debit(balance, amount)` is documented to return `Err` when `amount > balance`. The buggy ledger under test approves up to `balance + 20`. Naive AI code checks `is_ok` and moves the money — the overdraft ships. WARD's caller *must* verify the service's actual behavior against its contract on every call:
+
+```ward0
+extern fn ledger_debit(balance: int, amount: int) -> Result<int, str>
+  requires balance >= 0
+  requires amount >= 0
+  ensures is_ok(result) == (amount <= balance);  // the promise; extern defs
+  trust: "oracle reference stub"                // end with ';', trust follows
+```
+
+When the ledger lies (`amount=110, balance=100`), the generated boundary wrapper converts the violation into `Err("contract violation")`. Measured: **0/20 boundary leaks** vs. raw Dafny's **4/20**.
+
+**2. Idempotent charging — you can't double-charge a customer.** The dedup service promises `Ok(key+1)` for keys below 500 and `Ok(0)` for fresh keys; the gateway promises to decline anything above its limit. AI code that skips the "does the service match its contract?" check double-charges on retry or misses a decline. The checker forces the caller to compare every service's actual return against its documented contract — retries can't double-charge, over-limit charges can't silently succeed.
+
+**3. A currency round-trip — an FX exploit at the boundary.** `fx_convert(amount, 2)` is documented to accept only `amount <= 1000`. A service that honors `1100` lets a `501 USD → EUR → USD` round-trip succeed when it must fail (501 doubles to 1002). WARD catches the boundary violation before it ships.
+
+**The pattern:** in all three, the code *looks right* and the happy-path tests *pass* — the dangerous kind of slop. What fails it is a machine checking the contract, not a human rereading the code.
+
 ### The language the model writes
 
 The model never writes dependent types, proof scripts, or ownership annotations. It writes Python/TypeScript-shaped code with contracts:
