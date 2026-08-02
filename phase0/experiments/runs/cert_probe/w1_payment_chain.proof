@@ -1,0 +1,41 @@
+{
+  "format": "ward-cert/v0.1",
+  "module": "w1_payment_chain",
+  "source_sha256": "0e59002717e52aa7e2b5cba644736398c7746971f5fd5c745c9227136e178eef",
+  "emitted_dafny_sha256": "a9c6bda2b291ee42a4ee93a76c849a90fb4bc4c2a1662d1c6fb915ad55ed861c",
+  "toolchain": {
+    "ward_core": "0.1",
+    "dafny": "4.11.0",
+    "z3": "4.12.1",
+    "enforce_boundary": false,
+    "verification_time_limit": 30
+  },
+  "functions": [
+    {
+      "name": "pay",
+      "tier": "Proven",
+      "proof": "verified",
+      "verified": 1,
+      "errors": 0,
+      "verify_s": 1.884
+    }
+  ],
+  "trust_boundary": [
+    {
+      "extern": "auth_check",
+      "trust": "requires user_id > 0\nensures is_ok(result) == (user_id < 1000)",
+      "monitor": false
+    },
+    {
+      "extern": "rate_limit",
+      "trust": "requires amount > 0\nensures is_ok(result) == (amount <= 5000)",
+      "monitor": false
+    },
+    {
+      "extern": "stripe_charge",
+      "trust": "requires amount > 0\nensures is_ok(result) == (amount <= 100)",
+      "monitor": false
+    }
+  ],
+  "verdict": "VALID"
+}

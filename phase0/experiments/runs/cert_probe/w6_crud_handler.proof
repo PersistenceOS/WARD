@@ -1,0 +1,36 @@
+{
+  "format": "ward-cert/v0.1",
+  "module": "w6_crud_handler",
+  "source_sha256": "291a3fc6566010fb29a34b528db9b86756cb7a9c09b8b3898135c24c5c88a73e",
+  "emitted_dafny_sha256": "656900bb605ac71275766761b622c66ec50b652eec6c8562281ed1c84c3d1a32",
+  "toolchain": {
+    "ward_core": "0.1",
+    "dafny": "4.11.0",
+    "z3": "4.12.1",
+    "enforce_boundary": false,
+    "verification_time_limit": 30
+  },
+  "functions": [
+    {
+      "name": "crud_op",
+      "tier": "Tested",
+      "proof": "tested",
+      "verified": 0,
+      "errors": 0,
+      "verify_s": 1.881
+    }
+  ],
+  "trust_boundary": [
+    {
+      "extern": "db_get",
+      "trust": "requires key > 0\nensures is_ok(result) == (key < 1000)",
+      "monitor": false
+    },
+    {
+      "extern": "db_put",
+      "trust": "requires key > 0\nensures is_ok(result) == (key < 1000)",
+      "monitor": false
+    }
+  ],
+  "verdict": "VALID"
+}

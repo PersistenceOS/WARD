@@ -1,0 +1,36 @@
+{
+  "format": "ward-cert/v0.1",
+  "module": "w7_idempotency",
+  "source_sha256": "aef1a59bcd6fb2b6990d22f27d9746f18c647430b88f67792d535afe0b20d188",
+  "emitted_dafny_sha256": "8c6dadd98f0e0d3721445082ef1f9b3769471d8022c95c17057a4d7fac340392",
+  "toolchain": {
+    "ward_core": "0.1",
+    "dafny": "4.11.0",
+    "z3": "4.12.1",
+    "enforce_boundary": false,
+    "verification_time_limit": 30
+  },
+  "functions": [
+    {
+      "name": "charge_idempotent",
+      "tier": "Proven",
+      "proof": "verified",
+      "verified": 2,
+      "errors": 0,
+      "verify_s": 2.149
+    }
+  ],
+  "trust_boundary": [
+    {
+      "extern": "dedup_lookup",
+      "trust": "requires key > 0\nensures is_ok(result)\nensures (key < 500 and unwrap_ok(result) == key + 1) or (key >= 500 and unwrap_ok(result) == 0)",
+      "monitor": false
+    },
+    {
+      "extern": "gateway_charge",
+      "trust": "requires key > 0\nrequires amount > 0\nensures is_ok(result) == (amount <= 100)",
+      "monitor": false
+    }
+  ],
+  "verdict": "VALID"
+}

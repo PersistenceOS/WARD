@@ -1,0 +1,36 @@
+{
+  "format": "ward-cert/v0.1",
+  "module": "w4_order_placement",
+  "source_sha256": "e4a424db1f78db9860d8c8d668ff0049f2dad0988317c0124fbae0087dd18419",
+  "emitted_dafny_sha256": "8b66168fa5c4eb23f7a606c409d9abd1e4862d7f8a26b0f97d732900f34a348f",
+  "toolchain": {
+    "ward_core": "0.1",
+    "dafny": "4.11.0",
+    "z3": "4.12.1",
+    "enforce_boundary": false,
+    "verification_time_limit": 30
+  },
+  "functions": [
+    {
+      "name": "place_order",
+      "tier": "Proven",
+      "proof": "verified",
+      "verified": 2,
+      "errors": 0,
+      "verify_s": 2.123
+    }
+  ],
+  "trust_boundary": [
+    {
+      "extern": "stock_check",
+      "trust": "requires item > 0\nrequires qty > 0\nensures is_ok(result) == (item < 1000)\nensures (not is_ok(result)) or unwrap_ok(result) == qty",
+      "monitor": false
+    },
+    {
+      "extern": "inventory_reserve",
+      "trust": "requires item > 0\nrequires qty > 0\nensures is_ok(result) == (qty <= 20)",
+      "monitor": false
+    }
+  ],
+  "verdict": "VALID"
+}

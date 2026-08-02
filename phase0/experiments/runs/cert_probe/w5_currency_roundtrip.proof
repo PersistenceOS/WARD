@@ -1,0 +1,31 @@
+{
+  "format": "ward-cert/v0.1",
+  "module": "w5_currency_roundtrip",
+  "source_sha256": "61dd16ead4dd57b368406fdc8ebd085d522a8652cb4fbb3e878766ac9e3add7d",
+  "emitted_dafny_sha256": "76e93304fad7d8fd24f8130784a101c69e2cfd120a65a12568f6d79680370021",
+  "toolchain": {
+    "ward_core": "0.1",
+    "dafny": "4.11.0",
+    "z3": "4.12.1",
+    "enforce_boundary": false,
+    "verification_time_limit": 30
+  },
+  "functions": [
+    {
+      "name": "round_trip",
+      "tier": "Proven",
+      "proof": "verified",
+      "verified": 2,
+      "errors": 0,
+      "verify_s": 2.135
+    }
+  ],
+  "trust_boundary": [
+    {
+      "extern": "fx_convert",
+      "trust": "requires amount >= 0\nrequires pair >= 1\nensures is_ok(result) == (pair == 1 or (pair == 2 and amount <= 1000))\nensures (not is_ok(result)) or (pair == 1 and unwrap_ok(result) == amount * 2) or (pair == 2 and unwrap_ok(result) == amount / 2)",
+      "monitor": false
+    }
+  ],
+  "verdict": "VALID"
+}
