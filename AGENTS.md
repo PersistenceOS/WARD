@@ -75,8 +75,8 @@ fn withdraw(balance: int, amount: int) -> int
   4/20), tiered proof cost, and checker-guided convergence.
 - Research prototype: `ward0` → Dafny + Z3 is the measured pipeline; the
   standalone SMT checker's first slice (`z3_backend`, Z3-direct, no Dafny)
-  is built; multi-target backends + the composition-first library remain
-  phases 3+.
+  and the multi-target first slice (`py_backend` → Python, E11 gate PASS)
+  are built; the composition-first verified library remains phases 3+.
 
 ## Where everything is
 
