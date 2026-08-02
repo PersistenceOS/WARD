@@ -2,7 +2,7 @@
 
 # 🛡️ WARD
 
-### A verification language for AI-written full-stack software
+### The language that makes the dangerous kind of AI code slop impossible to ship
 
 **Write code. Write a promise. The computer proves the promise.**
 
@@ -37,6 +37,21 @@ fn withdraw(balance: int, amount: int) -> int
     return balance - amount;
 }
 ```
+
+## What Ward actually prevents
+
+AI code slop isn't one thing. Ward targets the failure class that actually hurts — code that *looks* right, passes tests, and is subtly wrong — and is honest about the rest.
+
+| Slop type | What it looks like | Ward's answer | Status |
+|---|---|---|---|
+| **Silent correctness slop** | compiles, passes tests, subtly wrong — an overdraft slips through, an over-grant returns `Ok` | contracts + verifier + generated boundary enforcement | ✅ **Measured**: 0/20 boundary leaks (Phase-1 W), 75% fewer escapes (Phase-0 B) |
+| **Compile-failure slop** | output that doesn't parse | grammar-constrained decoding | 🔜 design (§3) |
+| **Edge-case slop** | missing boundaries, empty inputs | contracts force the model to state edges | 🟡 partial |
+| **Cheating slop** | trivial or vacuous promises that satisfy the checker | adversarial critic + mechanical test generation | 🔜 design (§7) |
+| **Hallucinated-dependency slop** | wrong versions, imaginary APIs | effect tracking + dependency pinning | 🔜 design (§4/§5) |
+| **Aesthetic slop** | bloat, over-engineering, duplication | — a verifier proves *correctness*, not elegance | ❌ not a goal |
+
+**The honest pitch:** Ward doesn't make the model write better — it makes bad output *fail*. On the failure mode that actually matters, the measured numbers are **8/8 solved with 0/20 boundary leaks** (vs. raw Dafny's 6/8 and 4/20) and a **75% reduction** in contract-violation escapes. The dangerous kind of AI slop can't ship. The trade-off is real (verify-time ratio 0.77 vs. the 0.7× target) — that's exactly why verification is tiered. The long-term answer to the rest of slop is the composition-first library (design §6): write less code, so there's less slop to catch.
 
 ## Design
 

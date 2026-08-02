@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WARD — A Frontier Verification Language</title>
-<meta name="description" content="Ward is a Python/TypeScript-shaped surface language that deterministically elaborates into Dafny — machine-checked correctness for AI-authored full-stack code.">
+<title>WARD — The language that stops AI code slop from shipping</title>
+<meta name="description" content="Ward is the verification language that makes the dangerous kind of AI code slop impossible to ship — write code, write a promise, and the computer proves the promise before anything runs.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
@@ -21,6 +21,7 @@
       <span class="brand-tag">v0.1 · research</span>
     </a>
     <nav class="nav-links">
+      <a href="#prevents">Prevents</a>
       <a href="#language">Language</a>
       <a href="#tiers">Tiers</a>
       <a href="#architecture">Architecture</a>
@@ -42,18 +43,19 @@
   <div class="hero-inner">
     <div class="hero-badge reveal">
       <span class="pulse-dot"></span>
-      Frontier verification language · Phase 1 complete · Conditional GO
+      Research project · Phase 1 complete · Conditional GO
     </div>
 
     <h1 class="hero-title reveal">
-      Write it in <span class="grad-text">words</span>.<br>
-      Prove it in <span class="grad-text grad-alt">math</span>.
+      AI writes the code.<br>
+      WARD proves it <span class="grad-text">isn't slop</span>.
     </h1>
 
     <p class="hero-sub reveal">
-      WARD is a Python/TypeScript-shaped surface language that <strong>deterministically elaborates
-      into Dafny</strong> — giving AI-authored programs machine-checked correctness without forcing
-      models to write off-distribution formal syntax.
+      Most AI code is checked by "does it compile" and "do the tests pass." WARD checks the harder
+      question: <strong>"is it right?"</strong> Every function carries a promise
+      (<code>requires</code> / <code>ensures</code>) and a deterministic toolchain
+      <strong>proves</strong> the promise mathematically before anything runs.
     </p>
 
     <div class="hero-cta reveal">
@@ -147,6 +149,74 @@
             <p><code>extern fn</code> + mandatory <code>trust:</code> annotations. The toolchain <em>generates</em> a runtime contract-check wrapper around every unverified-library call.</p>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLOP ═══════════ -->
+<section class="section" id="prevents">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">§ The honest pitch</span>
+      <h2>What WARD actually prevents.</h2>
+      <p>
+        AI code slop isn't one thing. WARD targets the failure class that actually hurts — code that
+        <em>looks</em> right, passes tests, and is subtly wrong — and is honest about the rest.
+      </p>
+    </div>
+
+    <div class="results-grid reveal">
+      <div class="result-card">
+        <h3>The slop taxonomy</h3>
+        <table class="result-table">
+          <thead>
+            <tr><th>Slop type</th><th>WARD's answer</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Silent correctness slop</strong> — looks right, passes tests, subtly wrong</td>
+              <td>contracts + verifier + generated boundary enforcement</td>
+              <td class="cell-pass">✅ measured</td>
+            </tr>
+            <tr>
+              <td>Compile-failure slop — doesn't parse</td>
+              <td>grammar-constrained decoding</td>
+              <td>🔜 design</td>
+            </tr>
+            <tr>
+              <td>Edge-case slop — missing boundaries</td>
+              <td>contracts force edges to be stated</td>
+              <td>🟡 partial</td>
+            </tr>
+            <tr>
+              <td>Cheating slop — vacuous promises</td>
+              <td>adversarial critic + mechanical tests</td>
+              <td>🔜 design</td>
+            </tr>
+            <tr>
+              <td>Hallucinated-dependency slop</td>
+              <td>effect tracking + dependency pinning</td>
+              <td>🔜 design</td>
+            </tr>
+            <tr>
+              <td>Aesthetic slop — bloat, duplication</td>
+              <td>— a verifier proves correctness, not elegance</td>
+              <td>❌ not a goal</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="result-card">
+        <h3>The measured claim</h3>
+        <p class="card-lead">Ward doesn't make the model write better — it makes bad output <strong>fail</strong>.</p>
+        <ul class="prevent-list">
+          <li><strong>8/8</strong> solved with <strong>0/20</strong> boundary leaks (Phase-1 W arm) vs. raw Dafny's 6/8 and 4/20</li>
+          <li><strong>75%</strong> reduction in contract-violation escapes (Phase-0 B)</li>
+          <li>The dangerous kind of AI slop <strong>can't ship</strong> — it's rejected before it runs</li>
+          <li>Trade-off is real (verify-time ratio 0.77 vs. 0.7×) — that's why verification is <strong>tiered</strong></li>
+        </ul>
       </div>
     </div>
   </div>
@@ -320,7 +390,7 @@
   <div class="footer-inner">
     <div class="footer-brand">
       <span class="brand-mark">🛡️</span> WARD
-      <p>Write. And Reason. Deductively.</p>
+      <p>Write code. Write a promise. The computer proves the promise.</p>
     </div>
     <div class="footer-links">
       <a href="https://github.com/PersistenceOS/WARD" target="_blank" rel="noopener">GitHub</a>

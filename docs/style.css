@@ -308,6 +308,17 @@ code {
 .cell-fail { color: var(--fail); font-weight: 700; }
 .table-note { font-size: 12px; color: var(--text-faint); margin-top: 12px; }
 
+.card-lead { font-size: 16px; color: var(--text); margin-bottom: 18px; }
+.card-lead strong { color: var(--accent); }
+
+.prevent-list { list-style: none; }
+.prevent-list li {
+  font-size: 13.5px; color: var(--text-dim); padding: 10px 0 10px 24px;
+  position: relative; border-top: 1px dashed var(--border-soft);
+}
+.prevent-list li::before { content: "▸"; position: absolute; left: 4px; color: var(--accent-2); }
+.prevent-list strong { color: var(--text); }
+
 .verdict {
   display: flex; gap: 22px; align-items: center;
   border: 1px solid var(--border); border-radius: var(--radius);
