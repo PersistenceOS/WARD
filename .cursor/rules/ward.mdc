@@ -1,0 +1,40 @@
+---
+description: WARD — verify AI-written code with a contract language + SMT checker (Dafny + Z3). Use when writing or reviewing consequential logic (payments, auth, ledgers) that must be proven correct, not just tested.
+globs: ["**/*.ward0", "**/ward.py", "**/AGENTS.md"]
+---
+
+# WARD — prove code isn't slop
+
+WARD is a Python/TypeScript-shaped language where every function carries a
+contract (`requires` / `ensures`), and a deterministic toolchain **proves** it
+with an SMT-backed verifier (`ward0` → Dafny + Z3). "Compiles" means
+"provably satisfies its stated contract" — not "looks plausible."
+
+## Commands
+
+```bash
+python ward.py check file.ward0            # elaborate + prove + diagnose
+python ward.py check file.ward0 --json     # machine-readable
+python ward.py check file.ward0 --enforce  # extern contract-check wrappers
+python ward.py proof file.ward0            # .proof certificate
+```
+
+Use `phase0/.venv/Scripts/python` (Windows) or `phase0/.venv/bin/python`
+(POSIX). Requires `dafny` 4.11 + `z3` 4.12 on PATH.
+
+## ward0 rules
+
+- Contracts are annotations — **no trailing `;`** after requires/ensures.
+- No method calls in contracts — pure builtins (`len`, `is_ok`, `is_err`,
+  `unwrap_ok`, `unwrap_err`) only.
+- `extern fn` needs a contract + `trust: "..."` line.
+- State the edges: bounds, empty inputs, negative amounts.
+- Totality by construction: bounded `for` only, no recursion.
+
+## Repair loop
+
+On failure, `check` prints structured triples — `(location, obligation,
+counterexample)` in ward0 terms. Fix the named fn, re-run, iterate to
+`✓ PROVED`. Heed the tightness advisory: a Proven fn with `tau < TAU0`
+(vacuous spec) must have its `ensures` strengthened before the tier means
+anything.
