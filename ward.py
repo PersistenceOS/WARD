@@ -7,6 +7,8 @@ One command to verify ward0 code from any terminal or AI agent
     python ward.py check path/to/file.ward0      # transpile + prove + diagnose
     python ward.py emit  path/to/file.ward0      # transpile to Dafny only
     python ward.py proof path/to/file.ward0      # emit a .proof certificate
+    python ward.py setup                         # install the Claude Code skill +
+                                                 # Cursor rule globally; check venv + toolchain
 
 `check` is the important one. It runs the real toolchain:
     1. elaborate (ward0 surface -> ward-core IR -> Dafny 4)
@@ -140,6 +142,144 @@ def _run_check(source: str, enforce: bool, emit: bool, verify_limit: int | None)
     return report
 
 
+def _cmd_setup(args) -> int:
+    """One-command setup — activate WARD in your AI tools.
+
+    Installs (idempotently, never clobbers unrelated files):
+      - Claude Code skill  -> ~/.claude/skills/ward/   (global, any project)
+      - Cursor rule        -> ~/.cursor/rules/ward.mdc (global, any project)
+    then checks the phase0 venv + Dafny/Z3 toolchain and prints a per-tool
+    'you're ready' summary. Needs only the stdlib — no lark, no Dafny.
+
+    The Claude-skill refresh only replaces a destination it owns (a dir whose
+    SKILL.md mentions WARD); any other directory is left untouched.
+    """
+    import shutil
+    import subprocess
+
+    repo = Path(__file__).resolve().parent
+    home = Path.home()
+    problems: list[str] = []
+
+    def status(ok: bool, msg: str) -> None:
+        print(f"  {'✓' if ok else '✗'} {msg}")
+
+    print("ward setup")
+    print("  installing agent skills (global)…")
+
+    # ---- Claude Code skill: repo .claude/skills/ward -> ~/.claude/skills/ward ----
+    claude_src = repo / ".claude" / "skills" / "ward"
+    claude_dst = home / ".claude" / "skills" / "ward"
+    if args.dry_run:
+        print(f"  (dry-run) would copy {claude_src} -> {claude_dst}")
+    elif claude_src.is_dir():
+        try:
+            claude_dst.parent.mkdir(parents=True, exist_ok=True)
+            if claude_dst.exists():
+                # Never delete a directory we don't own: only refresh when the
+                # existing SKILL.md is recognizably WARD's (a user-customized
+                # skill dir is left untouched and reported).
+                marker = claude_dst / "SKILL.md"
+                own = marker.is_file() and "WARD" in marker.read_text(
+                    encoding="utf-8", errors="replace")[:200]
+                if own:
+                    shutil.rmtree(claude_dst)  # refresh to the repo's skill
+                else:
+                    raise OSError(
+                        "existing ~/.claude/skills/ward is not a WARD skill — "
+                        "left untouched (remove it yourself to replace)")
+            shutil.copytree(claude_src, claude_dst)
+            status(True, f"Claude Code skill -> {claude_dst}")
+        except OSError as exc:
+            problems.append(f"claude skill install: {exc}")
+            status(False, f"Claude Code skill ({exc})")
+    else:
+        problems.append(f"skill source missing: {claude_src}")
+        status(False, f"Claude Code skill (source missing: {claude_src})")
+
+    # ---- Cursor rule: repo .cursor/rules/ward.mdc -> ~/.cursor/rules/ward.mdc ----
+    cursor_src = repo / ".cursor" / "rules" / "ward.mdc"
+    cursor_dst = home / ".cursor" / "rules" / "ward.mdc"
+    if args.dry_run:
+        print(f"  (dry-run) would copy {cursor_src} -> {cursor_dst}")
+    elif cursor_src.is_file():
+        try:
+            cursor_dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cursor_src, cursor_dst)
+            status(True, f"Cursor rule -> {cursor_dst}")
+        except OSError as exc:
+            problems.append(f"cursor rule install: {exc}")
+            status(False, f"Cursor rule ({exc})")
+    else:
+        problems.append(f"cursor rule source missing: {cursor_src}")
+        status(False, f"Cursor rule (source missing: {cursor_src})")
+
+    # ---- venv check (optional creation with --create-venv) ----
+    if sys.platform == "win32":
+        venv_py = repo / "phase0" / ".venv" / "Scripts" / "python.exe"
+        venv_hint = ("python -m venv phase0/.venv && "
+                     "phase0/.venv/Scripts/python -m pip install lark")
+    else:
+        venv_py = repo / "phase0" / ".venv" / "bin" / "python"
+        venv_hint = ("python3 -m venv phase0/.venv && "
+                     "phase0/.venv/bin/python -m pip install lark")
+    venv_ok = venv_py.exists()
+    venv_reported = False  # avoid double-reporting one failure
+    if args.create_venv and not venv_ok:
+        print(f"  creating {venv_py.parent}…")
+        try:
+            subprocess.run([sys.executable, "-m", "venv", str(venv_py.parent)], check=True)
+            # The Microsoft Store python app-execution alias can "succeed" at
+            # creating a venv that has pip.exe but no python.exe (it cannot
+            # copy its own reparse-point binary). Catch that specific case so
+            # the user gets an actionable message instead of a WinError 2.
+            if not venv_py.exists():
+                raise OSError(
+                    "venv was created but has no python.exe — the Microsoft Store "
+                    "python app-execution alias can produce a broken venv; install "
+                    "Python from python.org (or set PYTHON_BIN), then re-run")
+            subprocess.run([str(venv_py), "-m", "pip", "install", "--quiet", "lark"], check=True)
+            venv_ok = True
+        except (OSError, subprocess.CalledProcessError) as exc:
+            # pip needs network; a failed install must be a clean problem
+            # report, never a raw traceback
+            venv_reported = True
+            problems.append(f"venv create/install failed: {exc}")
+            status(False, f"venv create/install ({exc})")
+    if venv_ok:
+        status(True, f"venv python: {venv_py}")
+    elif not venv_reported:
+        problems.append("venv missing (run: " + venv_hint + ")")
+        status(False, f"venv python (run: {venv_hint})")
+
+    # ---- toolchain check ----
+    dafny = shutil.which("dafny")
+    z3 = shutil.which("z3")
+    status(bool(dafny), f"dafny on PATH{' -> ' + dafny if dafny else ' (needed for live verification)'}")
+    status(bool(z3), f"z3 on PATH{' -> ' + z3 if z3 else ' (needed for live verification)'}")
+    if not (dafny and z3):
+        problems.append("dafny/z3 not both on PATH — live verification needs both")
+
+    # ---- summary ----
+    print()
+    if args.dry_run:
+        print("dry run — nothing written.")
+        return 0
+    if problems:
+        print("WARD skills installed; notes:")
+        for p in problems:
+            print(f"  - {p}")
+        print("  Fix the above, then re-run `python ward.py setup`.")
+        return 1
+    print("✓ You're ready. In any AI tool:")
+    print("    Claude Code    ask to 'verify this with ward' — the skill auto-loads.")
+    print("    Cursor         the rule auto-applies to .ward0 files.")
+    print("    OpenCode/Cline AGENTS.md in the repo teaches the agent automatically.")
+    print("    VS Code        run the CLI from the terminal, or add the README task:")
+    print(f"                     {venv_py} ward.py check <file>.ward0")
+    return 0
+
+
 def _print_human(r: dict, path: str) -> None:
     print(f"ward check: {path}")
     if r.get("stage") == "elaborate":
@@ -195,6 +335,10 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--verify-limit", type=int, default=None, help="per-verification time limit (s)")
     c.add_argument("--json", action="store_true", help="machine-readable output")
 
+    s = sub.add_parser("setup", help="install the Claude Code skill + Cursor rule globally; check venv + toolchain")
+    s.add_argument("--dry-run", action="store_true", help="show what would be done, without writing")
+    s.add_argument("--create-venv", action="store_true", help="create phase0/.venv + install lark if missing")
+
     e = sub.add_parser("emit", help="transpile a .ward0 file to Dafny only")
     e.add_argument("input")
     e.add_argument("--enforce", action="store_true")
@@ -206,6 +350,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-o", "--output", default=None)
 
     args = ap.parse_args(argv)
+
+    if args.cmd == "setup":
+        return _cmd_setup(args)
 
     if args.cmd == "check":
         r = _run_check(_load_source(Path(args.input)), args.enforce,

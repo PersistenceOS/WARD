@@ -207,7 +207,8 @@ C1 tiers ✅ · C2 boundary at scale (0/20) ✅ · C3a accuracy ✅ (8/8 vs 6/8)
 
 ```
 ├── README.md                 ← you are here
-├── ward.py                   ← the CLI (check / emit / proof)
+├── ward.py                   ← the CLI (check / emit / proof / setup)
+├── install.sh / install.ps1  ← one-line installers (Wire up section)
 ├── AGENTS.md                 ← agent guide (Claude Code, Cursor, OpenCode, Cline…)
 ├── .claude/skills/ward/      ← Claude Code skill
 ├── .cursor/rules/ward.mdc    ← Cursor rule
@@ -248,11 +249,28 @@ Requires [Dafny 4.11.0](https://github.com/dafny-lang/dafny) and [Z3 4.12.1](htt
 
 ## Wire up WARD in your AI tools
 
-WARD is a CLI first — every agent tool can drive it. Clone the repo, then point your tool at it:
+WARD is a CLI first — every agent tool can drive it. Two ways to get set up: the **one-line installer** (fresh machine, nothing pre-cloned) or the **one-command setup** (from an existing checkout). Both end with the same result: the Claude Code skill and Cursor rule installed globally, so the tools know about WARD in *any* project.
+
+### One-line install (any OS)
 
 ```bash
-git clone https://github.com/PersistenceOS/WARD.git
-cd WARD
+# macOS / Linux / Git Bash on Windows:
+curl -fsSL https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.sh | bash
+```
+
+```powershell
+# native Windows PowerShell:
+iex (irm https://raw.githubusercontent.com/PersistenceOS/WARD/main/install.ps1)
+```
+
+This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `phase0/.venv`, installs `lark`, runs `ward.py setup`, and prints a ready-check. Dafny + Z3 are *checked*, not installed — see the note at the end.
+
+### One-command setup (from the repo)
+
+```bash
+python ward.py setup                # install skill + rule globally, check venv + toolchain
+python ward.py setup --create-venv  # also create phase0/.venv + install lark if missing
+python ward.py setup --dry-run      # show what it would do, write nothing
 ```
 
 ### Quick check (any tool)
@@ -268,26 +286,11 @@ phase0/.venv/Scripts/python ward.py check your_file.ward0 --json
 
 ### Claude Code
 
-The repo ships a ready-made skill — activate it globally once:
-
-```bash
-# from the WARD repo
-mkdir -p ~/.claude/skills
-cp -r .claude/skills/ward ~/.claude/skills/
-```
-
-Then Claude Code auto-loads it whenever you ask to verify or de-slop code. (`AGENTS.md` in the repo root also teaches any agent the workflow.)
+`ward.py setup` installs the skill to `~/.claude/skills/ward/` — Claude Code auto-loads it whenever you ask to verify or de-slop code, in any project. (`AGENTS.md` in the repo root also teaches any agent the workflow.)
 
 ### Cursor
 
-Copy the rule into your project (or enable the repo's existing rule):
-
-```bash
-mkdir -p .cursor/rules
-cp .cursor/rules/ward.mdc .cursor/rules/
-```
-
-Cursor then auto-suggests WARD's commands when you work on `.ward0` files or ask for verification.
+`ward.py setup` installs the rule to `~/.cursor/rules/ward.mdc` — Cursor auto-applies it to `.ward0` files project-wide. (The repo also ships a project-scoped copy at `.cursor/rules/ward.mdc`.)
 
 ### VS Code
 
