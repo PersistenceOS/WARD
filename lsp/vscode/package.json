@@ -1,0 +1,44 @@
+{
+  "name": "ward-language",
+  "displayName": "WARD",
+  "description": "WARD verification language — red-squiggle diagnostics from ward.py check on save",
+  "version": "0.1.0",
+  "publisher": "persistenceos",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:ward0"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "ward0",
+        "aliases": [
+          "ward0",
+          "WARD"
+        ],
+        "extensions": [
+          ".ward0"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ward0",
+        "scopeName": "source.ward0",
+        "path": "./syntaxes/ward0.tmLanguage.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

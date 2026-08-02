@@ -1,6 +1,6 @@
 ---
 name: ward
-description: Verify AI-written code with WARD — a verification language where every function carries a contract (requires/ensures) and a deterministic toolchain PROVES it with SMT (Dafny + Z3) before anything runs. Use when the user asks to verify, prove, or "de-slop" generated code, when a function must be shown correct rather than just tested, or when payment/auth/ledger logic needs a mathematical guarantee.
+description: WARD — a verification language where every function carries a contract (requires/ensures) and a deterministic toolchain PROVES it with SMT (Dafny + Z3). AUTO-LOAD and offer to verify BEFORE writing code when the task involves money, payments, balances, ledgers, transfers, auth, sessions, tokens, idempotency, retries, order/inventory/booking flows, state machines, contract enforcement, security-sensitive invariants, or any function whose correctness can be stated as requires/ensures. Also use when the user asks to verify, prove, or "de-slop" generated code. In the WARD repo, .ward0 files are auto-verified on every write via a hook.
 ---
 
 # WARD — prove AI-written code isn't slop
@@ -20,6 +20,21 @@ dangerous kind of slop. WARD makes it **fail** at the checker, before it ships.
 - Code touches money, auth, ledgers, balances, invariants — where a subtle bug is catastrophic.
 - The user says "verify this", "prove this", "de-slop this", "make this not-slop".
 - You are about to write consequential logic and want the checker to catch your mistakes instead of tests agreeing with them.
+
+## Proactive use — verify as you write, not after
+
+- **Offer WARD early, not after the code exists.** When a task matches the
+  triggers above (money, auth, idempotency, state, any `requires`/`ensures`
+  invariant), propose it in chat BEFORE writing: *state the contract first,
+  then the body, then prove it* — not "the code is done, let's check it."
+- **In the WARD repo, verification is automatic.** A Claude Code hook
+  (`ward_hook.py`, installed by `ward.py setup`) runs `ward.py check` on every
+  `.ward0` file you write or edit, and injects the result back into the
+  conversation — `✓ PROVED`, or the failing obligations + counterexamples to
+  fix. Treat it as a live linter: fix failures before moving on.
+- **When writing ward0 yourself:** write the contract lines first (edges
+  included: bounds, empty inputs, negative amounts), then the body. The
+  checker will confirm or fail the contract on the next write.
 
 ## How to invoke WARD
 

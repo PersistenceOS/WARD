@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ward0",
+  "scopeName": "source.ward0",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "match": "//.*$", "name": "comment.line.double-slash.ward0" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        { "begin": "\"", "end": "\"", "name": "string.quoted.double.ward0" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(extern\\s+fn|fn|requires|ensures|invariant|trust|effect|dep|tier|if|else|for|in|range|return|let|and|or|not|forall|exists|true|false)\\b",
+          "name": "keyword.control.ward0"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "match": "\\b(int|bool|str|Unit|Result|List)\\b",
+          "name": "storage.type.ward0"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "match": "\\b\\d+\\b", "name": "constant.numeric.ward0" }
+      ]
+    }
+  }
+}

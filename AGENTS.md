@@ -52,6 +52,22 @@ fn withdraw(balance: int, amount: int) -> int
   runtime contract-check wrapper around it.
 - Totality by construction: bounded `for` loops only, no recursion.
 
+## When WARD fires automatically
+
+- **Auto-verify hook (Claude Code):** after `ward.py setup`, every `.ward0`
+  file you write or edit is checked automatically (a PostToolUse hook runs
+  `ward.py check --json`) and the result is injected back into the
+  conversation — `✓ PROVED`, or the failing obligations + counterexamples to
+  fix. Treat it as a live linter: fix failures before moving on. Before a
+  write, a PreToolUse nudge reminds you to state the contract first. Disable
+  by removing the WARD hook entries from `~/.claude/settings.json`.
+- **Proactive suggestion:** for contract-shaped work — money, payments,
+  balances, ledgers, auth, sessions, tokens, idempotency, retries, state
+  machines, order/inventory/booking flows, any invariant that can be stated
+  as `requires`/`ensures` — propose verification EARLY: state the contract
+  before writing the body, not after the code exists.
+- **Always available:** `python ward.py check file.ward0` on demand.
+
 ## How to use WARD as an agent
 
 1. **Write ward0** (or ask the model to) with real contracts — state the edges.

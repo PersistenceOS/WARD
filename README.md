@@ -309,10 +309,27 @@ This clones the repo to `~/WARD` (override with `WARD_DIR=...`), creates the `ph
 ### One-command setup (from the repo)
 
 ```bash
-python ward.py setup                # install skill + rule globally, check venv + toolchain
+python ward.py setup                # install skill + rule + auto-verify hook globally, check venv + toolchain
 python ward.py setup --create-venv  # also create phase0/.venv + install lark and z3-solver if missing
 python ward.py setup --dry-run      # show what it would do, write nothing
 ```
+
+> **Auto-verify as you write (Claude Code):** setup also installs a
+> `PreToolUse`/`PostToolUse` hook into `~/.claude/settings.json`. From then on,
+> every time the agent writes or edits a `.ward0` file, `ward.py check` runs
+> automatically and the result (✓ PROVED, or the failing obligations +
+> counterexamples) is injected back into the conversation — verification as the
+> code is being written, not after. Before a write, a short nudge reminds the
+> agent to state the contract first. The hook fires *only* for `.ward0` files
+> (anything else is a no-op) and works in any project.
+>
+> - Windows users: rely on `ward.py setup` for the hook (it writes the exact
+>   Python path); the repo ships no project-level hook, so there is nothing to
+>   configure per-repo.
+> - Set `WARD_HOOK_VERIFY=0` to keep the contract-first nudge but skip the
+>   automatic check (slow machines / very large modules).
+> - To remove the hook entirely, delete the WARD entries from
+>   `~/.claude/settings.json`.
 
 ### Quick check (any tool)
 

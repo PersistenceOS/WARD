@@ -142,12 +142,49 @@ def _run_check(source: str, enforce: bool, emit: bool, verify_limit: int | None)
     return report
 
 
+def _merge_ward_hook(settings_path: Path, command: str) -> None:
+    """Idempotently merge the WARD auto-verify hook into ~/.claude/settings.json.
+
+    Only the hooks.PreToolUse / hooks.PostToolUse arrays are touched: any
+    existing entry whose command mentions ward_hook.py is replaced; everything
+    else in the file is preserved. Raises OSError/ValueError on unreadable or
+    invalid JSON (including parseable-but-malformed shapes like a bare list or
+    `hooks: []`) — the caller reports it and leaves the file untouched.
+    """
+    data: dict = {}
+    if settings_path.is_file():
+        raw = settings_path.read_text(encoding="utf-8")
+        if raw.strip():
+            loaded = json.loads(raw)
+            if not isinstance(loaded, dict):
+                raise ValueError("settings.json is not a JSON object — left untouched")
+            data = loaded
+    hooks = data.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        raise ValueError("settings.json 'hooks' is not an object — left untouched")
+    entry = {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [{"type": "command", "command": command}],
+    }
+    for event in ("PreToolUse", "PostToolUse"):
+        lst = hooks.setdefault(event, [])
+        if not isinstance(lst, list):
+            raise ValueError(f"settings.json hooks.{event} is not a list — left untouched")
+        lst[:] = [e for e in lst if "ward_hook.py" not in str(e)]
+        lst.append(entry)
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    settings_path.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 def _cmd_setup(args) -> int:
     """One-command setup — activate WARD in your AI tools.
 
     Installs (idempotently, never clobbers unrelated files):
-      - Claude Code skill  -> ~/.claude/skills/ward/   (global, any project)
-      - Cursor rule        -> ~/.cursor/rules/ward.mdc (global, any project)
+      - Claude Code skill        -> ~/.claude/skills/ward/   (global, any project)
+      - Cursor rule              -> ~/.cursor/rules/ward.mdc (global, any project)
+      - Claude Code auto-verify  -> ~/.claude/settings.json (global; fires only
+        hook                      for .ward0 files — check as they're written)
     then checks the phase0 venv + Dafny/Z3 toolchain and prints a per-tool
     'you're ready' summary. Needs only the stdlib — no lark, no Dafny.
 
@@ -258,6 +295,29 @@ def _cmd_setup(args) -> int:
     elif not venv_reported:
         problems.append("venv missing (run: " + venv_hint + ")")
         status(False, f"venv python (run: {venv_hint})")
+
+    # ---- Claude Code auto-verify hook: ~/.claude/settings.json ----
+    # PreToolUse/PostToolUse hooks on Write|Edit|MultiEdit that fire ONLY for
+    # .ward0 files (ward_hook.py self-guards on the extension): nudge the model
+    # to state the contract first, then auto-run `ward.py check --json` after
+    # every write and inject the result back — verification as the code is
+    # being written, not after. Idempotent merge; unrelated settings preserved.
+    hook_src = repo / "ward_hook.py"
+    settings_path = home / ".claude" / "settings.json"
+    if args.dry_run:
+        print(f"  (dry-run) would add WARD auto-verify hook to {settings_path}")
+    elif hook_src.is_file():
+        try:
+            interpreter = venv_py if venv_py.exists() else sys.executable
+            command = f'"{interpreter}" "{hook_src}"'
+            _merge_ward_hook(settings_path, command)
+            status(True, f"Claude Code auto-verify hook -> {settings_path}")
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            problems.append(f"claude hook install: {exc}")
+            status(False, f"Claude Code auto-verify hook ({exc})")
+    else:
+        problems.append(f"hook source missing: {hook_src}")
+        status(False, "Claude Code auto-verify hook (source missing: ward_hook.py)")
 
     # ---- toolchain check ----
     dafny = shutil.which("dafny")
