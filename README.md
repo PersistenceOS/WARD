@@ -168,6 +168,17 @@ Toolchain: **57/57 suites green** (grammar 20/20, transpiler 24/24, harness 13/1
 
 Read honestly: Ward pays an up-front premium — a 629-token guide (vs. Dafny's 216) is re-sent on every attempt — and buys it back with fewer attempts: **per correct result, Ward is 7% cheaper (850 vs 916)**, and it delivered 8/8 where raw Dafny delivered 6/8. The guide is a fixed constant: it dominates tiny tasks (83% of Ward's spend here) and shrinks to noise on real programs, where the attempt savings dominate. To get 8 correct results at D's rate would take ~10.7 tasks ≈ 7,330 tokens — the same outcome, Ward is cheaper. The honest asterisk: if verification doesn't converge (weak loop invariants), attempts — and re-sent guide tokens — compound. That ceiling is exactly what the tiered design (Tested → Contracted → Proven) is built to bound.
 
+### Certificate — "WARD ships proofs, not promises" (Phase-A/C probe)
+
+**The productization step.** Verification today is a *process* that dies on the machine with Dafny+Z3 installed. The goal is to make the proof a *shippable artifact*: every verified module ships as `pay.ward0` + `pay.proof`, checkable by anyone with a tiny dependency-free checker — no model, no Dafny, no Z3, no trust in the Ward lab's runtime.
+
+This is proof-carrying code (Necula, 1997), which failed industrially because proofs were too expensive to generate for human code. **AI generation inverts the economics**: the verification loop already runs during generation, so the certificate costs almost nothing extra. Both halves now exist and are measured:
+
+- **Emission** (`harness/certificate.py`): `.proof` with source + emitted-Dafny hashes, per-function tier/proof/`verify_s`, and the trust-boundary manifest (every extern, its `trust:` string, monitor flag). Measured on 5 w-tasks: **certificate production adds 0.0026% of verify time** (10.13 s verify vs 0.00026 s emit) — ~2,000× under the ≤ 5% gate.
+- **Independent checking** (`harness/cert_check.py`): a stdlib-only validator (runs anywhere) that rebinds the source hash, enforces the T6 tier rules, validates the trust manifest against the source, and recomputes the verdict. **G2 fidelity**: all 5 certificates validate. **G3 tamper-evidence**: modifying source, a trust string, or a recorded verdict invalidates the certificate in every test case. 11 tests, harness suite green.
+
+**The honest boundary (Level-1):** the checker validates the *artifact and the tier semantics*, not the SMT proof itself — independent re-derivation is the Phase-3 standalone checker. Pre-registered as **gate E9** in the [Phase-2 scoping doc](files/ward-phase2-scoping.md); full design in [files/ward-certified-code.md](files/ward-certified-code.md).
+
 ## Roadmap
 
 | Phase | Status | Scope |
@@ -192,8 +203,12 @@ Read honestly: Ward pays an up-front premium — a 629-token guide (vs. Dafny's 
     ├── grammar/              ward0 grammar v0.1 (lark PEG) + tests
     ├── transpiler/           ward0 → Dafny transpiler
     ├── harness/              generate → transpile → dafny verify → hidden tests
+    │   ├── certificate.py    .proof emission (ward-cert v0.1)
+    │   └── cert_check.py     standalone .proof validator (no Dafny/Z3)
     ├── wardcore/             typed core IR (Tier/EffectKind enums) — 15/15 tests
-    └── benchmarks/           62 tasks (3 tiers) + 8 w-tasks + 6 B-scenarios
+    ├── benchmarks/           62 tasks (3 tiers) + 8 w-tasks + 6 B-scenarios
+    └── experiments/
+        └── runs/cert_probe/  5 measured .proof certificates
 ```
 
 ## Getting started
