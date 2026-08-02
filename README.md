@@ -290,7 +290,13 @@ Requires [Dafny 4.11.0](https://github.com/dafny-lang/dafny) and [Z3 4.12.1](htt
 
 ## Wire up WARD in your AI tools
 
-WARD is a CLI first — every agent tool can drive it. Two ways to get set up: the **one-line installer** (fresh machine, nothing pre-cloned) or the **one-command setup** (from an existing checkout). Both end with the same result: the Claude Code skill and Cursor rule installed globally, so the tools know about WARD in *any* project.
+WARD is a CLI first — every agent tool can drive it. Two ways to get set up: the **one-line installer** (fresh machine, nothing pre-cloned) or the **one-command setup** (from an existing checkout). Both end with the same result: the Claude Code skill, the Cursor rule, and the Claude Code auto-verify hook installed globally. Then WARD guards your AI's code at three moments:
+
+| Moment | Guard | Where |
+|---|---|---|
+| **Before** it's written | the agent *proposes* WARD for contract-shaped work (money, auth, ledgers, idempotency, state) | skill + Cursor rule + `AGENTS.md` |
+| **While** it's written | every `.ward0` write is auto-checked; results fed back into the chat | Claude Code hook — `python ward.py setup` |
+| **After** each save | red-squiggle diagnostics with counterexamples | VS Code LSP — `lsp/` |
 
 ### One-line install (any OS)
 
@@ -314,22 +320,33 @@ python ward.py setup --create-venv  # also create phase0/.venv + install lark an
 python ward.py setup --dry-run      # show what it would do, write nothing
 ```
 
-> **Auto-verify as you write (Claude Code):** setup also installs a
-> `PreToolUse`/`PostToolUse` hook into `~/.claude/settings.json`. From then on,
-> every time the agent writes or edits a `.ward0` file, `ward.py check` runs
-> automatically and the result (✓ PROVED, or the failing obligations +
-> counterexamples) is injected back into the conversation — verification as the
-> code is being written, not after. Before a write, a short nudge reminds the
-> agent to state the contract first. The hook fires *only* for `.ward0` files
-> (anything else is a no-op) and works in any project.
->
-> - Windows users: rely on `ward.py setup` for the hook (it writes the exact
->   Python path); the repo ships no project-level hook, so there is nothing to
->   configure per-repo.
-> - Set `WARD_HOOK_VERIFY=0` to keep the contract-first nudge but skip the
->   automatic check (slow machines / very large modules).
-> - To remove the hook entirely, delete the WARD entries from
->   `~/.claude/settings.json`.
+### Auto-verify as you write (Claude Code)
+
+`python ward.py setup` also installs a `PreToolUse`/`PostToolUse` hook into
+`~/.claude/settings.json` — it works in *any* project, not just the WARD repo:
+
+1. **Before a write** of a `.ward0` file, the agent is nudged: *state the
+   contract first* — `requires`/`ensures`, edges included.
+2. **After every `.ward0` write**, `ward.py check` runs automatically and the
+   result is injected back into the conversation — `✓ PROVED`, or the failing
+   obligations with **counterexamples** to fix:
+
+```text
+[WARD auto-verify] ledger.ward0
+  ✗ NOT PROVED — 1 failing obligation(s):
+    withdraw:ensures: postcondition of withdraw — ensures result == balance - amount — could not be proved on this return path
+      counterexample: {'balance': '1', 'amount': '1', 'result': '1'}
+```
+
+The hook fires *only* for `.ward0` files (anything else is an instant no-op).
+Confirm it's active by checking `~/.claude/settings.json` for the WARD
+`PreToolUse`/`PostToolUse` entries. To tune it:
+
+- **`WARD_HOOK_VERIFY=0`** keeps the contract-first nudge but skips the
+  automatic check (slow machines / very large modules).
+- **Remove it** by deleting the WARD entries from `~/.claude/settings.json`.
+- Windows users: `ward.py setup` writes the exact Python path — nothing to
+  configure per repo.
 
 ### Quick check (any tool)
 
@@ -344,15 +361,49 @@ phase0/.venv/Scripts/python ward.py check your_file.ward0 --json
 
 ### Claude Code
 
-`ward.py setup` installs the skill to `~/.claude/skills/ward/` — Claude Code auto-loads it whenever you ask to verify or de-slop code, in any project. (`AGENTS.md` in the repo root also teaches any agent the workflow.)
+`ward.py setup` installs the skill to `~/.claude/skills/ward/`. The skill's
+description is trigger-rich, so Claude Code *proposes* verification on its own
+when a task matches — money, payments, ledgers, auth, idempotency, state
+machines — then the auto-verify hook (above) checks every `.ward0` write.
+(`AGENTS.md` in the repo root teaches any agent the same workflow.)
 
 ### Cursor
 
-`ward.py setup` installs the rule to `~/.cursor/rules/ward.mdc` — Cursor auto-applies it to `.ward0` files project-wide. (The repo also ships a project-scoped copy at `.cursor/rules/ward.mdc`.)
+`ward.py setup` installs the rule to `~/.cursor/rules/ward.mdc`. It is marked
+`alwaysApply`, so Cursor keeps WARD in context in every session — the agent
+proposes contracts before writing contract-shaped code — and auto-attaches to
+`.ward0` files. (The repo also ships a project-scoped copy at
+`.cursor/rules/ward.mdc`.)
 
 ### VS Code
 
-Run the CLI from the integrated terminal, or add it as a task:
+**Red squiggles (the LSP).** `lsp/` ships a minimal Language Server for the
+`ward0` language: on every save it runs `ward.py check` and places the failing
+obligations — with their counterexamples — on the exact `requires`/`ensures`
+line. Run it from the repo:
+
+```bash
+cd lsp/vscode
+npm install                  # vscode-languageclient (extension-only dependency)
+code lsp/vscode              # open the extension folder, then press F5
+```
+
+Open any `.ward0` file and save: a broken contract is a red squiggle on the
+contract line — `…could not be proved on this return path — counterexample:
+amount=1, balance=1, result=1`. A vacuous spec (`tau < TAU0`) shows as a yellow
+warning. To package and share it:
+
+```bash
+cp ward_lsp.py lsp/vscode/ward_lsp.py      # bundle the server into the extension
+cd lsp/vscode && npx @vscode/vsce package
+code --install-extension ward-language-0.1.0.vsix
+```
+
+Requires WARD installed (`python ward.py setup`) with `dafny` + `z3` on PATH.
+Details and env vars (`WARD_HOME`, `WARD_LSP_VERIFY_LIMIT`, …) in
+[`lsp/README.md`](lsp/README.md).
+
+**Prefer a plain CLI task?** Add this instead of (or alongside) the LSP:
 
 ```jsonc
 // .vscode/tasks.json
